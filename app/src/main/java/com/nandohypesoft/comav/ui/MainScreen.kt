@@ -17,11 +17,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -409,19 +414,70 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Box(
+                    val linhas = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
+                    val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
+                    val listState = rememberLazyListState()
+                    val coroutineScope = rememberCoroutineScope()
+
+                    if (secoes.isNotEmpty()) {
+                        Text(
+                            text = "Atalhos rápidos:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(secoes) { secao ->
+                                Surface(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(secao.indiceLinha)
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = secao.titulo,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
                     ) {
-                        SelectionContainer {
-                            Text(
-                                text = musicaAberta!!.conteudo,
-                                fontSize = (18 * escalaFonte).sp,
-                                lineHeight = (28 * escalaFonte).sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                        itemsIndexed(linhas) { index, linha ->
+                            val isHeader = secoes.any { it.indiceLinha == index }
+                            SelectionContainer {
+                                Text(
+                                    text = if (linha.isEmpty()) " " else linha,
+                                    fontSize = (18 * escalaFonte).sp,
+                                    lineHeight = (28 * escalaFonte).sp,
+                                    fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = if (isHeader) 4.dp else 1.dp)
+                                )
+                            }
                         }
                     }
 
@@ -532,6 +588,39 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
     }
+}
+
+data class SecaoCifra(
+    val titulo: String,
+    val indiceLinha: Int
+)
+
+fun detectarSecoesCifra(conteudo: String): List<SecaoCifra> {
+    val linhas = conteudo.split("\n")
+    val secoes = mutableListOf<SecaoCifra>()
+    
+    val regexSecao = Regex("^\\[?(intro|introducao|introdução|refrao|refrão|coro|ponte|bridge|solo|verso|verse|pre-refrao|pré-refrão|outro|final|instrumental)\\d*\\b", RegexOption.IGNORE_CASE)
+    
+    for ((index, linha) in linhas.withIndex()) {
+        val linhaLimpa = linha.trim()
+        if (linhaLimpa.isEmpty()) continue
+        
+        val semColchetes = linhaLimpa.removeSurrounding("[", "]").removeSurrounding("(", ")").trim()
+        val eCabecalho = semColchetes.length <= 35 && (
+            regexSecao.containsMatchIn(linhaLimpa) ||
+            semColchetes.endsWith(":") ||
+            (linhaLimpa.startsWith("[") && linhaLimpa.endsWith("]")) ||
+            (linhaLimpa.startsWith("(") && linhaLimpa.endsWith(")"))
+        )
+        
+        if (eCabecalho) {
+            val nomeSecao = semColchetes.removeSuffix(":").trim()
+            if (nomeSecao.isNotBlank()) {
+                secoes.add(SecaoCifra(titulo = nomeSecao, indiceLinha = index))
+            }
+        }
+    }
+    return secoes
 }
 
 @Composable
