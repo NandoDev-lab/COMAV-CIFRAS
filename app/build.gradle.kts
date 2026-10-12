@@ -56,9 +56,10 @@ dependencies {
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // JSON & PDF
+    // JSON & PDF & QR Code
     implementation(libs.gson)
     implementation(libs.pdfbox.android)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

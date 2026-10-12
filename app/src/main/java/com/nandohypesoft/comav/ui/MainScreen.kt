@@ -1,8 +1,11 @@
 package com.nandohypesoft.comav.ui
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,6 +30,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.asImageBitmap
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import java.util.UUID
 import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -82,6 +90,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
 
     var musicaParaExcluir by remember { mutableStateOf<Musica?>(null) }
+    var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
+    var mostrarModoProjetor by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(mensagemAlerta) {
@@ -143,11 +153,14 @@ fun MainScreen(viewModel: MainViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Tema escuro",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    OutlinedButton(
+                        onClick = { mostrarDialogoCompartilharQr = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("QR Compartilhar", fontSize = 12.sp)
+                    }
+
                     Switch(
                         checked = temaEscuro,
                         onCheckedChange = { viewModel.alterarTema(it) }
@@ -407,8 +420,20 @@ fun MainScreen(viewModel: MainViewModel) {
                             )
                         }
 
-                        TextButton(onClick = { viewModel.fecharVisualizador() }) {
-                            Text("Fechar")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { mostrarModoProjetor = true },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Transmitir", fontSize = 12.sp)
+                            }
+
+                            TextButton(onClick = { viewModel.fecharVisualizador() }) {
+                                Text("Fechar")
+                            }
                         }
                     }
 
@@ -587,6 +612,162 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
             }
         }
+    }
+
+    // Diálogo Compartilhar App & Banco (QR Code)
+    if (mostrarDialogoCompartilharQr) {
+        val uniqueSessionId = remember { "COMAV_SHARE_${UUID.randomUUID().toString().substring(0, 8).uppercase()}" }
+        val qrBitmap = remember { gerarQrCodeBitmap(uniqueSessionId) }
+
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoCompartilharQr = false },
+            title = { Text("Compartilhar App & Banco (QR)") },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "ID Único de Sincronização:\n$uniqueSessionId",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (qrBitmap != null) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "QR Code de Compartilhamento",
+                            modifier = Modifier.size(180.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Para enviar o banco de dados completo (todas as 94 cifras e 89 letras) para outro dispositivo, exporte o arquivo de backup e compartilhe-o.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        launcherExportarBackup.launch("comav_backup_completo.json")
+                        mostrarDialogoCompartilharQr = false
+                    }
+                ) {
+                    Text("Exportar Banco p/ Compartilhar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoCompartilharQr = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
+    }
+
+    // Modal Modo Projetor / Transmissão de Tela
+    if (mostrarModoProjetor && musicaAberta != null) {
+        val sessionSongId = remember { "COMAV_CAST_${UUID.randomUUID().toString().substring(0, 6).uppercase()}" }
+        val qrCastBitmap = remember { gerarQrCodeBitmap(sessionSongId) }
+
+        Dialog(
+            onDismissRequest = { mostrarModoProjetor = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = androidx.compose.ui.graphics.Color.Black
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = musicaAberta!!.titulo,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Modo Transmissão • ID: $sessionSongId",
+                                fontSize = 12.sp,
+                                color = androidx.compose.ui.graphics.Color.LightGray
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (qrCastBitmap != null) {
+                                Image(
+                                    bitmap = qrCastBitmap.asImageBitmap(),
+                                    contentDescription = "QR Cast",
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                            TextButton(onClick = { mostrarModoProjetor = false }) {
+                                Text("Sair", color = androidx.compose.ui.graphics.Color.Red)
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = musicaAberta!!.conteudo,
+                            fontSize = (26 * escalaFonte).sp,
+                            lineHeight = (38 * escalaFonte).sp,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+
+                    Text(
+                        text = "COMAV • Transmissão ao Vivo",
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        }
+    }
+}
+
+fun gerarQrCodeBitmap(conteudo: String, largura: Int = 512, altura: Int = 512): Bitmap? {
+    return try {
+        val writer = QRCodeWriter()
+        val bitMatrix = writer.encode(conteudo, BarcodeFormat.QR_CODE, largura, altura)
+        val bmp = Bitmap.createBitmap(largura, altura, Bitmap.Config.RGB_565)
+        for (x in 0 until largura) {
+            for (y in 0 until altura) {
+                bmp.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+        bmp
+    } catch (e: Exception) {
+        null
     }
 }
 
