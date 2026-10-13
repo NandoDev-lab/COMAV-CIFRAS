@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -89,6 +90,23 @@ class MainViewModel(
 
     init {
         recarregar()
+        sincronizarGistSilencioso()
+    }
+
+    private fun sincronizarGistSilencioso() {
+        viewModelScope.launch {
+            try {
+                val url = userPreferencesRepository.urlGistRemota.first().trim()
+                if (url.isNotEmpty()) {
+                    val qtd = repository.sincronizarComGistRemoto(url)
+                    if (qtd > 0) {
+                        recarregar()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silencioso em caso de estar offline ou sem internet
+            }
+        }
     }
 
     fun recarregar() {
