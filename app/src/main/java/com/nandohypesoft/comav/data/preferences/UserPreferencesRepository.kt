@@ -30,7 +30,7 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     val urlGistRemota: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[URL_GIST_REMOTA] ?: ""
+        preferences[URL_GIST_REMOTA] ?: "https://gist.githubusercontent.com/NandoDev-lab/c1cc5216eebad1cecf47d04adfc4d41b/raw/a2455a444831c7e2a2d81ba1bd2b1ba4d54ddf83/comav_banco.json"
     }
 
     suspend fun salvarTemaEscuro(ativo: Boolean) {
