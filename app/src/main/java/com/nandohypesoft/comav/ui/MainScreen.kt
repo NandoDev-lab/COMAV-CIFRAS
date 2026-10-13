@@ -31,6 +31,14 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import java.util.UUID
@@ -92,6 +100,9 @@ fun MainScreen(viewModel: MainViewModel) {
     var musicaParaExcluir by remember { mutableStateOf<Musica?>(null) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarModoProjetor by remember { mutableStateOf(false) }
+    var mostrarPainelAdmin by remember { mutableStateOf(false) }
+    var mostrarSubMenuAbrirBackup by remember { mutableStateOf(false) }
+    var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(mensagemAlerta) {
@@ -135,18 +146,30 @@ fun MainScreen(viewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "COMAV",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Cifras e letras offline",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "COMAV",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Cifras e letras offline",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { mostrarPainelAdmin = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Painel Administrativo",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 Row(
@@ -753,6 +776,110 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
     }
+
+    // Painel Administrativo
+    if (mostrarPainelAdmin) {
+        AlertDialog(
+            onDismissRequest = { mostrarPainelAdmin = false },
+            title = { Text("Painel Administrativo") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            launcherImportarDoc.launch(arrayOf("*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Importar DOCX / PDF")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            launcherExportarBackup.launch("comav_backup.json")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Exportar Backup")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarSubMenuAbrirBackup = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Abrir Backup")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarPainelAdmin = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
+    }
+
+    // Submenu Abrir Backup
+    if (mostrarSubMenuAbrirBackup) {
+        AlertDialog(
+            onDismissRequest = { mostrarSubMenuAbrirBackup = false },
+            title = { Text("Abrir Backup") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            mostrarSubMenuAbrirBackup = false
+                            launcherImportarBackup.launch(arrayOf("application/json", "*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Armazenamento Interno")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarSubMenuAbrirBackup = false
+                            mostrarLeitorQrCode = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("QR Code")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarSubMenuAbrirBackup = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Leitor de QR Code Dialog
+    if (mostrarLeitorQrCode) {
+        QrCodeScannerDialog(
+            onScanResult = { resultText ->
+                mostrarLeitorQrCode = false
+                viewModel.importarBackupTexto(resultText)
+            },
+            onDismiss = { mostrarLeitorQrCode = false }
+        )
+    }
 }
 
 fun gerarQrCodeBitmap(conteudo: String, largura: Int = 512, altura: Int = 512): Bitmap? {
@@ -768,6 +895,163 @@ fun gerarQrCodeBitmap(conteudo: String, largura: Int = 512, altura: Int = 512): 
         bmp
     } catch (e: Exception) {
         null
+    }
+}
+
+@Composable
+fun QrCodeScannerDialog(
+    onScanResult: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Leitor de QR Code",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("Fechar")
+                    }
+                }
+
+                if (hasCameraPermission) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                val previewView = androidx.camera.view.PreviewView(ctx)
+                                val cameraProviderFuture = androidx.camera.lifecycle.ProcessCameraProvider.getInstance(ctx)
+
+                                cameraProviderFuture.addListener({
+                                    val cameraProvider = cameraProviderFuture.get()
+                                    val preview = androidx.camera.core.Preview.Builder().build().also {
+                                        it.setSurfaceProvider(previewView.surfaceProvider)
+                                    }
+
+                                    val imageAnalyzer = androidx.camera.core.ImageAnalysis.Builder()
+                                        .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                        .build()
+                                        .also { analysis ->
+                                            analysis.setAnalyzer(
+                                                ContextCompat.getMainExecutor(ctx),
+                                                QrCodeAnalyzer { qrResult ->
+                                                    onScanResult(qrResult)
+                                                }
+                                            )
+                                        }
+
+                                    try {
+                                        cameraProvider.unbindAll()
+                                        cameraProvider.bindToLifecycle(
+                                            lifecycleOwner,
+                                            androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA,
+                                            preview,
+                                            imageAnalyzer
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                }, ContextCompat.getMainExecutor(ctx))
+
+                                previewView
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Permissão de câmera necessária para ler QR Code.")
+                    }
+                }
+
+                Text(
+                    text = "Aponte a câmera para o QR Code de backup.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+class QrCodeAnalyzer(
+    private val onQrCodeScanned: (String) -> Unit
+) : androidx.camera.core.ImageAnalysis.Analyzer {
+    private val reader = com.google.zxing.MultiFormatReader().apply {
+        setHints(
+            mapOf(
+                com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to listOf(com.google.zxing.BarcodeFormat.QR_CODE)
+            )
+        )
+    }
+
+    override fun analyze(image: androidx.camera.core.ImageProxy) {
+        val buffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        val width = image.width
+        val height = image.height
+
+        val source = com.google.zxing.PlanarYUVLuminanceSource(
+            bytes, width, height, 0, 0, width, height, false
+        )
+        val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+        try {
+            val result = reader.decode(binaryBitmap)
+            onQrCodeScanned(result.text)
+        } catch (_: Exception) {
+        } finally {
+            image.close()
+        }
     }
 }
 

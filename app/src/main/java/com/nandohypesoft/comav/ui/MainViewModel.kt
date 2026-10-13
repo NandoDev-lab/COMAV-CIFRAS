@@ -220,6 +220,18 @@ class MainViewModel(
         }
     }
 
+    fun importarBackupTexto(jsonTexto: String) {
+        viewModelScope.launch {
+            try {
+                val qtd = repository.importarBanco(jsonTexto)
+                recarregar()
+                _mensagemAlerta.value = "Backup restaurado via QR Code: $qtd música(s) adicionada(s)."
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "QR Code inválido ou não é um backup COMAV: ${e.localizedMessage}"
+            }
+        }
+    }
+
     fun limparAlerta() {
         _mensagemAlerta.value = null
     }

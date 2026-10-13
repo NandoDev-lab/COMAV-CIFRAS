@@ -15,6 +15,7 @@ datastore = "1.1.2"
 gson = "2.11.0"
 pdfboxAndroid = "2.0.27.0"
 zxingCore = "3.5.3"
+camerax = "1.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,6 +41,10 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }
+camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

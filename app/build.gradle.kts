@@ -56,10 +56,14 @@ dependencies {
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // JSON & PDF & QR Code
+    // JSON & PDF & QR Code & CameraX
     implementation(libs.gson)
     implementation(libs.pdfbox.android)
     implementation(libs.zxing.core)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
