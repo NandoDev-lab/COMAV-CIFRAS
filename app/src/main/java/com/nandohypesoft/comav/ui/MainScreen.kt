@@ -27,8 +27,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material.icons.Icons
@@ -102,6 +105,10 @@ fun MainScreen(viewModel: MainViewModel) {
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarModoProjetor by remember { mutableStateOf(false) }
     var mostrarPainelAdmin by remember { mutableStateOf(false) }
+    var mostrarDialogoSenhaAdmin by remember { mutableStateOf(false) }
+    var senhaAdminDigitada by remember { mutableStateOf("") }
+    var erroSenhaAdmin by remember { mutableStateOf(false) }
+    var modoExclusaoHabilitado by remember { mutableStateOf(false) }
     var mostrarSubMenuAbrirBackup by remember { mutableStateOf(false) }
     var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -164,7 +171,11 @@ fun MainScreen(viewModel: MainViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    IconButton(onClick = { mostrarPainelAdmin = true }) {
+                    IconButton(onClick = {
+                        senhaAdminDigitada = ""
+                        erroSenhaAdmin = false
+                        mostrarDialogoSenhaAdmin = true
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Painel Administrativo",
@@ -324,10 +335,12 @@ fun MainScreen(viewModel: MainViewModel) {
                                     )
                                 }
 
-                                TextButton(
-                                    onClick = { musicaParaExcluir = musica }
-                                ) {
-                                    Text("Excluir", color = MaterialTheme.colorScheme.error)
+                                if (modoExclusaoHabilitado) {
+                                    TextButton(
+                                        onClick = { musicaParaExcluir = musica }
+                                    ) {
+                                        Text("Excluir", color = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
                         }
@@ -731,6 +744,61 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 
+    // Diálogo de Senha Administrativa
+    if (mostrarDialogoSenhaAdmin) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoSenhaAdmin = false },
+            title = { Text("Acesso Administrativo") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Informe a senha para acessar o painel:", fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = senhaAdminDigitada,
+                        onValueChange = {
+                            senhaAdminDigitada = it
+                            erroSenhaAdmin = false
+                        },
+                        placeholder = { Text("Senha") },
+                        singleLine = true,
+                        isError = erroSenhaAdmin,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (erroSenhaAdmin) {
+                        Text(
+                            text = "Senha incorreta!",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (senhaAdminDigitada == "27021986") {
+                            mostrarDialogoSenhaAdmin = false
+                            mostrarPainelAdmin = true
+                        } else {
+                            erroSenhaAdmin = true
+                        }
+                    }
+                ) {
+                    Text("Acessar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoSenhaAdmin = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     // Painel Administrativo
     if (mostrarPainelAdmin) {
         AlertDialog(
@@ -741,6 +809,29 @@ fun MainScreen(viewModel: MainViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Surface(
+                        onClick = { modoExclusaoHabilitado = !modoExclusaoHabilitado },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (modoExclusaoHabilitado) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (modoExclusaoHabilitado) "Modo Exclusão: Ativo" else "Modo Exclusão: Inativo",
+                                fontWeight = FontWeight.Bold,
+                                color = if (modoExclusaoHabilitado) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Switch(
+                                checked = modoExclusaoHabilitado,
+                                onCheckedChange = { modoExclusaoHabilitado = it }
+                            )
+                        }
+                    }
+
                     Button(
                         onClick = {
                             mostrarPainelAdmin = false
