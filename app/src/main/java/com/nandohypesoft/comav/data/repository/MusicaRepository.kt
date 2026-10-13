@@ -9,10 +9,14 @@ import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.MusicaNova
 import com.nandohypesoft.comav.model.TipoDeConteudo
 import com.nandohypesoft.comav.model.TipoDeOrigem
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MusicaRepository(
     private val musicaDao: MusicaDao,
@@ -154,5 +158,25 @@ class MusicaRepository(
 
         musicaDao.salvarTodas(entidades)
         return entidades.size
+    }
+
+    suspend fun sincronizarComGistRemoto(urlGist: String): Int = withContext(Dispatchers.IO) {
+        val urlLimpa = urlGist.trim()
+        if (urlLimpa.isEmpty()) {
+            throw IllegalArgumentException("A URL do Gist não foi configurada.")
+        }
+
+        val jsonTexto = try {
+            val url = URL(urlLimpa)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            connection.requestMethod = "GET"
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Falha ao conectar ao Gist remoto: ${e.localizedMessage}")
+        }
+
+        importarBanco(jsonTexto)
     }
 }

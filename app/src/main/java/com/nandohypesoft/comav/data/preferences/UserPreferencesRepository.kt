@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -17,6 +18,7 @@ class UserPreferencesRepository(private val context: Context) {
     companion object {
         private val TEMA_ESCURO = booleanPreferencesKey("tema_escuro")
         private val ESCALA_FONTE = floatPreferencesKey("escala_fonte")
+        private val URL_GIST_REMOTA = stringPreferencesKey("url_gist_remota")
     }
 
     val temaEscuro: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -25,6 +27,10 @@ class UserPreferencesRepository(private val context: Context) {
 
     val escalaFonte: Flow<Float> = context.dataStore.data.map { preferences ->
         preferences[ESCALA_FONTE] ?: 1.0f
+    }
+
+    val urlGistRemota: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[URL_GIST_REMOTA] ?: ""
     }
 
     suspend fun salvarTemaEscuro(ativo: Boolean) {
@@ -36,6 +42,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun salvarEscalaFonte(escala: Float) {
         context.dataStore.edit { preferences ->
             preferences[ESCALA_FONTE] = escala
+        }
+    }
+
+    suspend fun salvarUrlGistRemota(url: String) {
+        context.dataStore.edit { preferences ->
+            preferences[URL_GIST_REMOTA] = url.trim()
         }
     }
 }

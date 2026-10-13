@@ -60,6 +60,9 @@ class MainViewModel(
     val escalaFonte: StateFlow<Float> = userPreferencesRepository.escalaFonte
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
 
+    val urlGistRemota: StateFlow<String> = userPreferencesRepository.urlGistRemota
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     private val _musicas = MutableStateFlow<List<Musica>>(emptyList())
     val musicas: StateFlow<List<Musica>> = _musicas.asStateFlow()
 
@@ -228,6 +231,31 @@ class MainViewModel(
                 _mensagemAlerta.value = "Backup restaurado via QR Code: $qtd música(s) adicionada(s)."
             } catch (e: Exception) {
                 _mensagemAlerta.value = "QR Code inválido ou não é um backup COMAV: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun salvarUrlGistRemota(url: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.salvarUrlGistRemota(url)
+        }
+    }
+
+    fun sincronizarComGist() {
+        val url = urlGistRemota.value.trim()
+        if (url.isEmpty()) {
+            _mensagemAlerta.value = "Configure a URL Raw do Gist no Painel Administrativo primeiro."
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                _mensagemAlerta.value = "Conectando e baixando banco de cifras do Gist..."
+                val qtd = repository.sincronizarComGistRemoto(url)
+                recarregar()
+                _mensagemAlerta.value = "Sincronização concluída: $qtd música(s) atualizada(s) do Gist!"
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro na sincronização Gist: ${e.localizedMessage}"
             }
         }
     }

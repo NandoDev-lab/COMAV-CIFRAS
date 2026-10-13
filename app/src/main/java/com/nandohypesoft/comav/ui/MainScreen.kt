@@ -99,7 +99,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val rascunho by viewModel.rascunho.collectAsState()
     val temaEscuro by viewModel.temaEscuro.collectAsState()
     val escalaFonte by viewModel.escalaFonte.collectAsState()
+    val urlGistRemota by viewModel.urlGistRemota.collectAsState()
     val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
+
+    var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
     var musicaParaExcluir by remember { mutableStateOf<Musica?>(null) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
@@ -874,6 +877,38 @@ fun MainScreen(viewModel: MainViewModel) {
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Abrir Backup")
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Sincronização Remota via Gist:",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    OutlinedTextField(
+                        value = inputUrlGist,
+                        onValueChange = {
+                            inputUrlGist = it
+                            viewModel.salvarUrlGistRemota(it)
+                        },
+                        placeholder = { Text("URL Raw do Gist (https://gist...)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            viewModel.sincronizarComGist()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("🔄 Sincronizar Banco do Gist")
                     }
                 }
             },
