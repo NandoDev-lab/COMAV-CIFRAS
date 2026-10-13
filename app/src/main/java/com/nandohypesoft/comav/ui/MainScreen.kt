@@ -233,60 +233,13 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botões de Ação
-            Row(
+            // Botão de Nova Música
+            Button(
+                onClick = { viewModel.abrirCriacao() },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Button(
-                    onClick = { viewModel.abrirCriacao() },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("+ Nova música")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        launcherImportarDoc.launch(
-                            arrayOf(
-                                "application/pdf",
-                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            )
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Importar DOCX/PDF")
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                        val nomePadrao = "comav-backup-${dateFormat.format(Date())}.json"
-                        launcherExportarBackup.launch(nomePadrao)
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Exportar backup")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        launcherImportarBackup.launch(arrayOf("application/json"))
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Abrir backup")
-                }
+                Text("+ Nova música")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
