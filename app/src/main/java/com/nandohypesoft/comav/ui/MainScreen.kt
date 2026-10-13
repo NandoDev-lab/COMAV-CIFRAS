@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -174,14 +175,14 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { mostrarDialogoCompartilharQr = true },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text("QR Compartilhar", fontSize = 12.sp)
+                    IconButton(onClick = { mostrarDialogoCompartilharQr = true }) {
+                        Icon(
+                            imageVector = Icons.Default.QrCode,
+                            contentDescription = "Compartilhar Banco via QR Code",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     Switch(
@@ -807,6 +808,17 @@ fun MainScreen(viewModel: MainViewModel) {
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Exportar Backup")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarDialogoCompartilharQr = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Compartilhar Banco (QR Code)")
                     }
 
                     Button(
