@@ -68,12 +68,13 @@ class MusicaRepository(
 
     suspend fun listarMusicas(consulta: String = "", modo: ModoDeBusca = ModoDeBusca.LETRA): List<Musica> {
         val consultaLimpa = consulta.trim()
-        val consultaNormalizada = "%${normalizarTitulo(if (consultaLimpa.isEmpty()) consulta else consultaLimpa)}%"
+        val termoSemHash = consultaLimpa.removePrefix("#").trim()
+        val consultaNormalizada = "%${normalizarTitulo(if (termoSemHash.isEmpty()) consulta else termoSemHash)}%"
 
         val entidades = musicaDao.buscarMusicas(
             tipoDeConteudo = modo.name,
             consultaNormalizada = consultaNormalizada,
-            consultaLimpa = "%$consultaLimpa%"
+            consultaLimpa = "%$termoSemHash%"
         )
 
         val musicas = entidades.map { it.toMusica() }
@@ -91,8 +92,9 @@ class MusicaRepository(
         }
 
         return musicas.filter { musica ->
+            musica.identificador.toString() == termoSemHash ||
             normalizarTitulo(musica.titulo).contains(normalizarTitulo(consultaLimpa)) ||
-                    correspondeAConsultaDeCifra(musica.conteudo, consultaLimpa)
+            correspondeAConsultaDeCifra(musica.conteudo, consultaLimpa)
         }
     }
 
@@ -101,8 +103,17 @@ class MusicaRepository(
         val tituloLimpo = musicaNova.titulo.trim()
         val tituloNorm = normalizarTitulo(tituloLimpo)
 
+        val todas = musicaDao.obterTodasParaBackup()
+
+        val idFinal = if (identificador != null && identificador > 0L) {
+            identificador
+        } else {
+            val existenteMesmoTitulo = todas.find { it.tituloNormalizado == tituloNorm }
+            existenteMesmoTitulo?.identificador ?: ((todas.maxOfOrNull { it.identificador } ?: 0L) + 1L)
+        }
+
         val entity = MusicaEntity(
-            identificador = identificador ?: 0,
+            identificador = idFinal,
             titulo = tituloLimpo,
             tituloNormalizado = tituloNorm,
             conteudo = musicaNova.conteudo,
@@ -110,22 +121,19 @@ class MusicaRepository(
             tipoDeConteudo = musicaNova.tipoDeConteudo.name,
             tipoDeOrigem = musicaNova.tipoDeOrigem.name,
             nomeArquivoOrigem = musicaNova.nomeDoArquivoDeOrigem,
-            criadaEm = seNaoDefinidoCriadaEm(identificador, agora),
+            criadaEm = seNaoDefinidoCriadaEm(todas, idFinal, musicaNova.tipoDeConteudo.name, agora),
             atualizadaEm = agora
         )
 
         musicaDao.salvar(entity)
     }
 
-    private suspend fun seNaoDefinidoCriadaEm(identificador: Long?, fallback: Long): Long {
-        if (identificador == null || identificador == 0L) return fallback
-        // Em atualizacao, mantem o timestamp existente se achar
-        val todas = musicaDao.obterTodasParaBackup()
-        return todas.find { it.identificador == identificador }?.criadaEm ?: fallback
+    private fun seNaoDefinidoCriadaEm(todas: List<MusicaEntity>, id: Long, tipo: String, fallback: Long): Long {
+        return todas.find { it.identificador == id && it.tipoDeConteudo == tipo }?.criadaEm ?: fallback
     }
 
-    suspend fun excluirMusica(identificador: Long) {
-        musicaDao.excluir(identificador)
+    suspend fun excluirMusica(identificador: Long, tipoDeConteudo: TipoDeConteudo) {
+        musicaDao.excluir(identificador, tipoDeConteudo.name)
     }
 
     suspend fun exportarBanco(): BackupMusicas {
@@ -149,10 +157,34 @@ class MusicaRepository(
             throw IllegalArgumentException("O arquivo selecionado não é um backup COMAV válido.")
         }
 
+        val tituloParaId = mutableMapOf<String, Long>()
+        var proximoId = 1L
+
+        backup.musicas.forEach { musica ->
+            val norm = normalizarTitulo(musica.titulo)
+            if (norm.isNotBlank() && musica.identificador > 0L && !tituloParaId.containsKey(norm)) {
+                tituloParaId[norm] = musica.identificador
+                if (musica.identificador >= proximoId) {
+                    proximoId = musica.identificador + 1L
+                }
+            }
+        }
+
         val entidades = backup.musicas.map { musica ->
-            MusicaEntity.fromMusica(
-                musica = musica,
-                tituloNormalizado = normalizarTitulo(musica.titulo)
+            val norm = normalizarTitulo(musica.titulo)
+            val idFinal = tituloParaId.getOrPut(norm) { proximoId++ }
+
+            MusicaEntity(
+                identificador = idFinal,
+                titulo = musica.titulo.trim(),
+                tituloNormalizado = norm,
+                conteudo = musica.conteudo,
+                conteudoOriginal = musica.conteudoOriginal,
+                tipoDeConteudo = musica.tipoDeConteudo.name,
+                tipoDeOrigem = musica.tipoDeOrigem.name,
+                nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
+                criadaEm = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis(),
+                atualizadaEm = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
             )
         }
 

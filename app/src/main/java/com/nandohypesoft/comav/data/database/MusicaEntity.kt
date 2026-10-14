@@ -2,15 +2,17 @@ package com.nandohypesoft.comav.data.database
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.PrimaryKey
+
 import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.TipoDeConteudo
 import com.nandohypesoft.comav.model.TipoDeOrigem
 
-@Entity(tableName = "musicas")
+@Entity(
+    tableName = "musicas",
+    primaryKeys = ["identificador", "tipo_de_conteudo"]
+)
 data class MusicaEntity(
-    @PrimaryKey(autoGenerate = true)
-    val identificador: Long = 0,
+    val identificador: Long,
     val titulo: String,
     @ColumnInfo(name = "titulo_normalizado")
     val tituloNormalizado: String,

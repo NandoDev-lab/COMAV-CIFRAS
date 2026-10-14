@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -210,9 +211,9 @@ fun MainScreen(viewModel: MainViewModel) {
 
             // Campo de Busca
             val placeholderTexto = if (modoBusca == ModoDeBusca.CIFRA) {
-                "Buscar acorde ou título (ex.: Am G C)"
+                "Buscar nº (#12), acorde (Am G) ou título"
             } else {
-                "Buscar trecho da letra ou título"
+                "Buscar nº (#12), trecho ou título"
             }
 
             OutlinedTextField(
@@ -322,13 +323,30 @@ fun MainScreen(viewModel: MainViewModel) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = musica.titulo,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = "Nº ${musica.identificador}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = musica.titulo,
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     val tipoTexto = if (musica.tipoDeConteudo == TipoDeConteudo.CIFRA) "Cifra" else "Letra"
                                     Text(
@@ -362,7 +380,7 @@ fun MainScreen(viewModel: MainViewModel) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.excluirMusica(musica.identificador)
+                        viewModel.excluirMusica(musica)
                         musicaParaExcluir = null
                     }
                 ) {
@@ -399,8 +417,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = musicaAberta!!.titulo,
-                                fontSize = 24.sp,
+                                text = "Nº ${musicaAberta!!.identificador} · ${musicaAberta!!.titulo}",
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -430,7 +448,59 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Controles de Fonte na Leitura (Letras e Cifras)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tamanho da fonte:",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.alterarEscala(escalaFonte - 0.1f) },
+                                    enabled = escalaFonte > 0.71f,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("A−", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Text(
+                                    text = "${(escalaFonte * 100).toInt()}%",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                OutlinedButton(
+                                    onClick = { viewModel.alterarEscala(escalaFonte + 0.1f) },
+                                    enabled = escalaFonte < 1.81f,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("A+", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     val linhas = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
                     val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
@@ -476,25 +546,33 @@ fun MainScreen(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    LazyColumn(
-                        state = listState,
+                    val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
+
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
+                            .then(if (ehCifra) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
                     ) {
-                        itemsIndexed(linhas) { index, linha ->
-                            val isHeader = secoes.any { it.indiceLinha == index }
-                            SelectionContainer {
-                                Text(
-                                    text = if (linha.isEmpty()) " " else linha,
-                                    fontSize = (18 * escalaFonte).sp,
-                                    lineHeight = (28 * escalaFonte).sp,
-                                    fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = if (isHeader) 4.dp else 1.dp)
-                                )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            itemsIndexed(linhas) { index, linha ->
+                                val isHeader = secoes.any { it.indiceLinha == index }
+                                SelectionContainer {
+                                    Text(
+                                        text = if (linha.isEmpty()) " " else linha,
+                                        fontSize = (18 * escalaFonte).sp,
+                                        lineHeight = (28 * escalaFonte).sp,
+                                        fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                        fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                        softWrap = !ehCifra,
+                                        color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                        modifier = Modifier
+                                            .padding(vertical = if (isHeader) 4.dp else 1.dp)
+                                    )
+                                }
                             }
                         }
                     }

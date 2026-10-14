@@ -190,9 +190,9 @@ class MainViewModel(
         }
     }
 
-    fun excluirMusica(identificador: Long) {
+    fun excluirMusica(musica: Musica) {
         viewModelScope.launch {
-            repository.excluirMusica(identificador)
+            repository.excluirMusica(musica.identificador, musica.tipoDeConteudo)
             recarregar()
         }
     }
