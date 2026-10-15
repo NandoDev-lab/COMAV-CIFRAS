@@ -397,6 +397,8 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // Modal Visualizador
     if (visualizadorVisivel && musicaAberta != null) {
+        var ativarQuebraAutomatica by remember { mutableStateOf(false) }
+
         Dialog(
             onDismissRequest = { viewModel.fecharVisualizador() },
             properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -502,7 +504,36 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val linhas = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
+                    // Toggle Quebra Automática C(n)/L(n)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Modo Quebra Automática C(n)/L(n):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = ativarQuebraAutomatica,
+                            onCheckedChange = { ativarQuebraAutomatica = it }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val linhas = remember(musicaAberta!!.conteudo, ativarQuebraAutomatica, escalaFonte) {
+                        if (ativarQuebraAutomatica) {
+                            val maxC = (40 / escalaFonte).toInt().coerceIn(20, 60)
+                            QuebraAutomatica.quebraInteligente(musicaAberta!!.conteudo, maxChars = maxC)
+                        } else {
+                            musicaAberta!!.conteudo.split("\n")
+                        }
+                    }
                     val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
                     val listState = rememberLazyListState()
                     val coroutineScope = rememberCoroutineScope()
