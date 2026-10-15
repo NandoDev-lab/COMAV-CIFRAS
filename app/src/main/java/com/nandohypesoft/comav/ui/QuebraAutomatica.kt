@@ -28,7 +28,7 @@ object QuebraAutomatica {
         for (pair in rawPairs) {
             if (pair.isHeader) {
                 linhasFormatadas.add(pair.cifra)
-                currentIdx += 2
+                currentIdx++
                 continue
             }
 
@@ -56,14 +56,14 @@ object QuebraAutomatica {
                     currentIndex = breakIdx
                 }
 
-                // Atribuir índices saltando de 2 em 2: C1/L1, C3/L3, C5/L5...
+                // Atribuir índices sequenciais incrementando de 1 em 1: C1/L1, C2/L2, C3/L3...
                 for (chunkIdx in chunksCifra.indices) {
                     val cText = chunksCifra[chunkIdx]
                     val lText = if (chunkIdx < chunksLetra.size) chunksLetra[chunkIdx] else ""
                     if (cText.isNotBlank() || lText.isNotBlank()) {
                         linhasFormatadas.add("C($currentIdx): $cText")
                         linhasFormatadas.add("L($currentIdx): $lText")
-                        currentIdx += 2
+                        currentIdx++
                     }
                 }
             } else {
@@ -73,7 +73,7 @@ object QuebraAutomatica {
                 if (pair.letra.isNotBlank()) {
                     linhasFormatadas.add("L($currentIdx): ${pair.letra}")
                 }
-                currentIdx += 2
+                currentIdx++
             }
         }
 
