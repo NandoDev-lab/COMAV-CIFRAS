@@ -1,17 +1,11 @@
 package com.nandohypesoft.comav.ui
 
-data class BlocoIndexado(
-    val indice: Int,
-    val cifra: String,
-    val letra: String
-)
-
 object QuebraAutomatica {
 
     fun quebraInteligente(conteudo: String, maxChars: Int = 42): List<String> {
         val linhasBrutas = conteudo.split("\n")
         val linhasFormatadas = mutableListOf<String>()
-        var n = 1
+        var linhaContador = 1
 
         var i = 0
         while (i < linhasBrutas.size) {
@@ -22,14 +16,14 @@ object QuebraAutomatica {
                 ""
             }
 
-            // Se for cabeçalho ou seção (ex: [Refrão], [Intro]), mantém sem quebra C(n)/L(n) rígida
+            // Se for cabeçalho ou seção (ex: [Refrão], [Intro]), mantém sem quebra rígida C(n)/L(n)
             if (linhaCifra.trim().startsWith("[") && linhaCifra.trim().endsWith("]")) {
                 linhasFormatadas.add(linhaCifra)
                 if (linhaLetra.isNotBlank() && !linhaLetra.trim().startsWith("[")) {
                     linhasFormatadas.add(linhaLetra)
                     i++
                 }
-                n += 2
+                linhaContador++
                 i++
                 continue
             }
@@ -62,21 +56,21 @@ object QuebraAutomatica {
                     }
 
                     if (subCifra.isNotBlank() || subLetra.isNotBlank()) {
-                        linhasFormatadas.add("C($n): $subCifra")
-                        linhasFormatadas.add("L($n): $subLetra")
-                        n += 2
+                        linhasFormatadas.add("C($linhaContador): $subCifra")
+                        linhasFormatadas.add("L($linhaContador): $subLetra")
+                        linhaContador++
                     }
                     currentIndex = breakIdx
                 }
                 i += 2
             } else {
                 if (linhaCifra.isNotBlank()) {
-                    linhasFormatadas.add("C($n): $linhaCifra")
+                    linhasFormatadas.add("C($linhaContador): $linhaCifra")
                 }
                 if (linhaLetra.isNotBlank()) {
-                    linhasFormatadas.add("L($n): $linhaLetra")
+                    linhasFormatadas.add("L($linhaContador): $linhaLetra")
                 }
-                n += 2
+                linhaContador++
                 i += 2
             }
         }
