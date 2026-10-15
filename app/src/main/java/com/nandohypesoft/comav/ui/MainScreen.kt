@@ -592,17 +592,57 @@ fun MainScreen(viewModel: MainViewModel) {
                             itemsIndexed(linhas) { index, linha ->
                                 val isHeader = secoes.any { it.indiceLinha == index }
                                 SelectionContainer {
-                                    Text(
-                                        text = if (linha.isEmpty()) " " else linha,
-                                        fontSize = (18 * escalaFonte).sp,
-                                        lineHeight = (28 * escalaFonte).sp,
-                                        fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                                        fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
-                                        softWrap = !ehCifra,
-                                        color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                                        modifier = Modifier
-                                            .padding(vertical = if (isHeader) 4.dp else 1.dp)
-                                    )
+                                    if (ativarQuebraAutomatica && (linha.startsWith("C(") || linha.startsWith("L("))) {
+                                        val idx = linha.indexOf("): ")
+                                        val prefix = if (idx != -1) linha.substring(0, idx + 2) else ""
+                                        val content = if (idx != -1) linha.substring(idx + 3) else linha
+                                        val isC = prefix.startsWith("C")
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (isC) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                                                modifier = Modifier.width(60.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = prefix,
+                                                        fontSize = (12 * escalaFonte).sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isC) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = if (content.isEmpty()) " " else content,
+                                                fontSize = (18 * escalaFonte).sp,
+                                                lineHeight = (28 * escalaFonte).sp,
+                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                color = if (isC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                                            )
+                                        }
+                                    } else {
+                                        Text(
+                                            text = if (linha.isEmpty()) " " else linha,
+                                            fontSize = (18 * escalaFonte).sp,
+                                            lineHeight = (28 * escalaFonte).sp,
+                                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                            fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                            softWrap = !ehCifra,
+                                            color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier
+                                                .padding(vertical = if (isHeader) 4.dp else 1.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
