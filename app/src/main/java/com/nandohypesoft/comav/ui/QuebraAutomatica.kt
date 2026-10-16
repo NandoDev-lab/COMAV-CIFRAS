@@ -1,8 +1,53 @@
 package com.nandohypesoft.comav.ui
 
+data class BlocoCifraLetra(
+    val indice: Int,
+    val cifra: String,
+    val letra: String,
+    val isHeader: Boolean = false
+)
+
 object QuebraAutomatica {
 
-    fun quebraInteligente(conteudo: String, maxChars: Int = 42): List<String> {
+    enum class TipoLinha {
+        ACORDE,
+        LETRA,
+        SECAO,
+        VAZIA
+    }
+
+    private fun detectarTipo(linha: String): TipoLinha {
+        val t = linha.trim()
+        if (t.isEmpty()) return TipoLinha.VAZIA
+        if ((t.startsWith("[") && t.endsWith("]")) ||
+            t.contains("Intro", true) || 
+            t.contains("Refrão", true) || 
+            t.contains("Verso", true) || 
+            t.contains("Ponte", true) || 
+            t.contains("Solo", true) || 
+            t.contains("Final", true) ||
+            t.contains("1º vez", true) || 
+            t.contains("2º vez", true) ||
+            t.endsWith(":")) {
+            return TipoLinha.SECAO
+        }
+
+        val tokens = t.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return TipoLinha.VAZIA
+
+        val regexAcorde = Regex("^[A-G][#b]?(?:maj|min|dim|aug|sus2|sus4|sus|add9|m|7|4|6)?\\d*(?:/[A-G][#b]?)?$")
+        val countAcordes = tokens.count { token ->
+            regexAcorde.matches(token.replace(Regex("[()\\[\\].,;:!?|]"), ""))
+        }
+
+        return if ((countAcordes.toFloat() / tokens.size) >= 0.4f) {
+            TipoLinha.ACORDE
+        } else {
+            TipoLinha.LETRA
+        }
+    }
+
+    fun quebraInteligente(conteudo: String, maxChars: Int = 35): List<BlocoCifraLetra> {
         val linhasBrutas = conteudo.split("\n")
         
         data class RawPair(val cifra: String, val letra: String, val isHeader: Boolean)
@@ -10,25 +55,45 @@ object QuebraAutomatica {
 
         var i = 0
         while (i < linhasBrutas.size) {
-            val linhaCifra = linhasBrutas[i]
-            val linhaLetra = if (i + 1 < linhasBrutas.size) linhasBrutas[i + 1] else ""
+            val linha = linhasBrutas[i]
+            val tipo = detectarTipo(linha)
 
-            if (linhaCifra.trim().startsWith("[") && linhaCifra.trim().endsWith("]")) {
-                rawPairs.add(RawPair(linhaCifra, "", true))
+            if (tipo == TipoLinha.SECAO) {
+                rawPairs.add(RawPair(linha, "", true))
                 i++
+            } else if (tipo == TipoLinha.VAZIA) {
+                rawPairs.add(RawPair("", "", false))
+                i++
+            } else if (tipo == TipoLinha.ACORDE) {
+                val proximaLinha = if (i + 1 < linhasBrutas.size) linhasBrutas[i + 1] else ""
+                val tipoProxima = if (proximaLinha.isNotBlank()) detectarTipo(proximaLinha) else TipoLinha.VAZIA
+
+                if (tipoProxima == TipoLinha.LETRA) {
+                    rawPairs.add(RawPair(linha, proximaLinha, false))
+                    i += 2
+                } else {
+                    rawPairs.add(RawPair(linha, "", false))
+                    i++
+                }
             } else {
-                rawPairs.add(RawPair(linhaCifra, linhaLetra, false))
-                i += 2
+                rawPairs.add(RawPair("", linha, false))
+                i++
             }
         }
 
-        val linhasFormatadas = mutableListOf<String>()
+        val blocos = mutableListOf<BlocoCifraLetra>()
         var currentIdx = 1
 
         for (pair in rawPairs) {
             if (pair.isHeader) {
-                linhasFormatadas.add(pair.cifra)
-                currentIdx++
+                blocos.add(BlocoCifraLetra(currentIdx, pair.cifra, "", true))
+                currentIdx += 2
+                continue
+            }
+
+            if (pair.cifra.isBlank() && pair.letra.isBlank()) {
+                blocos.add(BlocoCifraLetra(currentIdx, "", ""))
+                currentIdx += 2
                 continue
             }
 
@@ -37,12 +102,13 @@ object QuebraAutomatica {
                 val chunksCifra = mutableListOf<String>()
                 val chunksLetra = mutableListOf<String>()
 
+                val baseText = if (pair.letra.isNotBlank()) pair.letra else pair.cifra
                 var currentIndex = 0
                 while (currentIndex < maxLen) {
                     val endIdx = minOf(currentIndex + maxChars, maxLen)
                     var breakIdx = endIdx
                     if (endIdx < maxLen) {
-                        val lastSpace = pair.letra.lastIndexOf(' ', endIdx)
+                        val lastSpace = baseText.lastIndexOf(' ', endIdx)
                         if (lastSpace > currentIndex) {
                             breakIdx = lastSpace + 1
                         }
@@ -56,27 +122,20 @@ object QuebraAutomatica {
                     currentIndex = breakIdx
                 }
 
-                // Atribuir índices sequenciais incrementando de 1 em 1: C1/L1, C2/L2, C3/L3...
                 for (chunkIdx in chunksCifra.indices) {
                     val cText = chunksCifra[chunkIdx]
                     val lText = if (chunkIdx < chunksLetra.size) chunksLetra[chunkIdx] else ""
                     if (cText.isNotBlank() || lText.isNotBlank()) {
-                        linhasFormatadas.add("C($currentIdx): $cText")
-                        linhasFormatadas.add("L($currentIdx): $lText")
-                        currentIdx++
+                        blocos.add(BlocoCifraLetra(currentIdx, cText, lText))
+                        currentIdx += 2
                     }
                 }
             } else {
-                if (pair.cifra.isNotBlank()) {
-                    linhasFormatadas.add("C($currentIdx): ${pair.cifra}")
-                }
-                if (pair.letra.isNotBlank()) {
-                    linhasFormatadas.add("L($currentIdx): ${pair.letra}")
-                }
-                currentIdx++
+                blocos.add(BlocoCifraLetra(currentIdx, pair.cifra, pair.letra))
+                currentIdx += 2
             }
         }
 
-        return linhasFormatadas
+        return blocos
     }
 }

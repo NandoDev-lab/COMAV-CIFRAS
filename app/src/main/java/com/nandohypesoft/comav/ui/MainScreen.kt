@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
@@ -398,6 +400,83 @@ fun MainScreen(viewModel: MainViewModel) {
     // Modal Visualizador
     if (visualizadorVisivel && musicaAberta != null) {
         var ativarQuebraAutomatica by remember { mutableStateOf(false) }
+        var modoTelaInteira by remember { mutableStateOf(false) }
+
+        if (modoTelaInteira) {
+            val configuration = LocalConfiguration.current
+            val screenWidthDp = configuration.screenWidthDp
+            val maxLineLength = remember(musicaAberta!!.conteudo) {
+                musicaAberta!!.conteudo.split("\n").maxOfOrNull { it.length } ?: 30
+            }
+            val autoFitScale = remember(maxLineLength, screenWidthDp) {
+                if (maxLineLength > 0) {
+                    (screenWidthDp.toFloat() / (maxLineLength * 9.5f)).coerceIn(0.4f, 1.8f)
+                } else {
+                    1.0f
+                }
+            }
+
+            Dialog(
+                onDismissRequest = { modoTelaInteira = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = musicaAberta!!.titulo,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = { modoTelaInteira = false },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Sair Tela Cheia", fontSize = 11.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState()),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                Text(
+                                    text = musicaAberta!!.conteudo,
+                                    fontSize = (18 * autoFitScale).sp,
+                                    lineHeight = (26 * autoFitScale).sp,
+                                    fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Dialog(
             onDismissRequest = { viewModel.fecharVisualizador() },
@@ -437,6 +516,12 @@ fun MainScreen(viewModel: MainViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            OutlinedButton(
+                                onClick = { modoTelaInteira = true },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Tela Cheia", fontSize = 12.sp)
+                            }
                             OutlinedButton(
                                 onClick = { mostrarModoProjetor = true },
                                 shape = RoundedCornerShape(8.dp)
@@ -526,14 +611,18 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val linhas = remember(musicaAberta!!.conteudo, ativarQuebraAutomatica, escalaFonte) {
+                    val configuration = LocalConfiguration.current
+                    val screenWidthDp = configuration.screenWidthDp
+
+                    val blocos = remember(musicaAberta!!.conteudo, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
                         if (ativarQuebraAutomatica) {
-                            val maxC = (40 / escalaFonte).toInt().coerceIn(20, 60)
+                            val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, 45)
                             QuebraAutomatica.quebraInteligente(musicaAberta!!.conteudo, maxChars = maxC)
                         } else {
-                            musicaAberta!!.conteudo.split("\n")
+                            emptyList()
                         }
                     }
+                    val linhasNormais = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
                     val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
                     val listState = rememberLazyListState()
                     val coroutineScope = rememberCoroutineScope()
@@ -545,11 +634,12 @@ fun MainScreen(viewModel: MainViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        LazyRow(
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(secoes) { secao ->
+                            secoes.forEach { secao ->
                                 Surface(
                                     onClick = {
                                         coroutineScope.launch {
@@ -589,48 +679,96 @@ fun MainScreen(viewModel: MainViewModel) {
                             state = listState,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            itemsIndexed(linhas) { index, linha ->
-                                val isHeader = secoes.any { it.indiceLinha == index }
-                                SelectionContainer {
-                                    if (ativarQuebraAutomatica && (linha.startsWith("C(") || linha.startsWith("L("))) {
-                                        val idx = linha.indexOf("): ")
-                                        val prefix = if (idx != -1) linha.substring(0, idx + 2) else ""
-                                        val content = if (idx != -1) linha.substring(idx + 3) else linha
-                                        val isC = prefix.startsWith("C")
-
-                                        Row(
+                            if (ativarQuebraAutomatica) {
+                                items(blocos) { bloco ->
+                                    if (bloco.isHeader) {
+                                        Text(
+                                            text = bloco.cifra,
+                                            fontSize = (20 * escalaFonte).sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 6.dp)
+                                        )
+                                    } else if (bloco.cifra.isBlank() && bloco.letra.isBlank()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                .padding(vertical = 3.dp)
                                         ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(4.dp),
-                                                color = if (isC) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-                                                modifier = Modifier.width(60.dp)
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Box(
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = prefix,
-                                                        fontSize = (12 * escalaFonte).sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = if (isC) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-                                                    )
+                                                if (bloco.cifra.isNotBlank()) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = MaterialTheme.colorScheme.primaryContainer
+                                                        ) {
+                                                            Text(
+                                                                text = " C(${bloco.indice}) ",
+                                                                fontSize = (11 * escalaFonte).sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                            )
+                                                        }
+                                                        SelectionContainer {
+                                                            Text(
+                                                                text = bloco.cifra,
+                                                                fontSize = (18 * escalaFonte).sp,
+                                                                lineHeight = (26 * escalaFonte).sp,
+                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                if (bloco.letra.isNotBlank()) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                                        ) {
+                                                            Text(
+                                                                text = " L(${bloco.indice}) ",
+                                                                fontSize = (11 * escalaFonte).sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                            )
+                                                        }
+                                                        SelectionContainer {
+                                                            Text(
+                                                                text = bloco.letra,
+                                                                fontSize = (18 * escalaFonte).sp,
+                                                                lineHeight = (26 * escalaFonte).sp,
+                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                                color = MaterialTheme.colorScheme.onBackground
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            Text(
-                                                text = if (content.isEmpty()) " " else content,
-                                                fontSize = (18 * escalaFonte).sp,
-                                                lineHeight = (28 * escalaFonte).sp,
-                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                                color = if (isC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
-                                            )
                                         }
-                                    } else {
+                                    }
+                                }
+                            } else {
+                                itemsIndexed(linhasNormais) { index, linha ->
+                                    val isHeader = secoes.any { it.indiceLinha == index }
+                                    SelectionContainer {
                                         Text(
                                             text = if (linha.isEmpty()) " " else linha,
                                             fontSize = (18 * escalaFonte).sp,

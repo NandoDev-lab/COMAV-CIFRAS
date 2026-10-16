@@ -204,7 +204,7 @@ class MainViewModel(
     }
 
     fun alterarEscala(novaEscala: Float) {
-        val escalaClamp = novaEscala.coerceIn(0.8f, 1.5f)
+        val escalaClamp = novaEscala.coerceIn(0.7f, 1.5f)
         viewModelScope.launch {
             userPreferencesRepository.salvarEscalaFonte(escalaClamp)
         }

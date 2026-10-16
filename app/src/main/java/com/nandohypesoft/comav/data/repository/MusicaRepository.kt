@@ -170,26 +170,43 @@ class MusicaRepository(
             }
         }
 
-        val entidades = backup.musicas.map { musica ->
+        val locaisAtuais = musicaDao.obterTodasParaBackup().associateBy { Pair(it.identificador, it.tipoDeConteudo) }
+        val entidadesParaSalvar = mutableListOf<MusicaEntity>()
+
+        backup.musicas.forEach { musica ->
             val norm = normalizarTitulo(musica.titulo)
             val idFinal = tituloParaId.getOrPut(norm) { proximoId++ }
+            val tipoStr = musica.tipoDeConteudo.name
 
-            MusicaEntity(
-                identificador = idFinal,
-                titulo = musica.titulo.trim(),
-                tituloNormalizado = norm,
-                conteudo = musica.conteudo,
-                conteudoOriginal = musica.conteudoOriginal,
-                tipoDeConteudo = musica.tipoDeConteudo.name,
-                tipoDeOrigem = musica.tipoDeOrigem.name,
-                nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
-                criadaEm = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis(),
-                atualizadaEm = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
-            )
+            val chave = Pair(idFinal, tipoStr)
+            val localExistente = locaisAtuais[chave]
+
+            val atualizadaEmFinal = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
+            val criadaEmFinal = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis()
+
+            // Proteção contra sobrescrita: se a alteração local for mais recente que a do Gist remoto, preserva a local!
+            if (localExistente != null && localExistente.atualizadaEm > atualizadaEmFinal) {
+                entidadesParaSalvar.add(localExistente)
+            } else {
+                entidadesParaSalvar.add(
+                    MusicaEntity(
+                        identificador = idFinal,
+                        titulo = musica.titulo.trim(),
+                        tituloNormalizado = norm,
+                        conteudo = musica.conteudo,
+                        conteudoOriginal = musica.conteudoOriginal,
+                        tipoDeConteudo = tipoStr,
+                        tipoDeOrigem = musica.tipoDeOrigem.name,
+                        nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
+                        criadaEm = if (localExistente != null) localExistente.criadaEm else criadaEmFinal,
+                        atualizadaEm = atualizadaEmFinal
+                    )
+                )
+            }
         }
 
-        musicaDao.salvarTodas(entidades)
-        return entidades.size
+        musicaDao.salvarTodas(entidadesParaSalvar)
+        return entidadesParaSalvar.size
     }
 
     suspend fun sincronizarComGistRemoto(urlGist: String): Int = withContext(Dispatchers.IO) {
