@@ -6,9 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.nandohypesoft.comav.data.database.EscalaCultoDao
 import com.nandohypesoft.comav.data.importation.DocumentExtractor
 import com.nandohypesoft.comav.data.preferences.UserPreferencesRepository
+import com.nandohypesoft.comav.data.repository.CultoRepository
 import com.nandohypesoft.comav.data.repository.MusicaRepository
+import com.nandohypesoft.comav.model.EscalaCulto
+import com.nandohypesoft.comav.model.EstatisticaMusica
 import com.nandohypesoft.comav.model.ModoDeBusca
 import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.MusicaNova
@@ -18,9 +22,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+enum class TelaDestino {
+    HOME,
+    LISTA_LETRAS,
+    LISTA_CIFRAS,
+    CADASTRO_CULTO,
+    ESTATISTICAS
+}
 
 fun normalizarQuebrasDeLinha(texto: String): String {
     return texto.replace("\r\n", "\n")
@@ -52,20 +65,26 @@ fun criarRascunho(musica: Musica? = null): MusicaNova {
 
 class MainViewModel(
     private val repository: MusicaRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val escalaCultoDao: EscalaCultoDao? = null
 ) : ViewModel() {
 
-    val temaEscuro: StateFlow<Boolean> = userPreferencesRepository.temaEscuro
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    private val cultoRepository = CultoRepository(escalaCultoDao)
 
-    val escalaFonte: StateFlow<Float> = userPreferencesRepository.escalaFonte
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+    private val _telaAtual = MutableStateFlow(TelaDestino.HOME)
+    val telaAtual: StateFlow<TelaDestino> = _telaAtual.asStateFlow()
 
-    val urlGistRemota: StateFlow<String> = userPreferencesRepository.urlGistRemota
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    private val _escalas = MutableStateFlow<List<EscalaCulto>>(emptyList())
+    val escalas: StateFlow<List<EscalaCulto>> = _escalas.asStateFlow()
+
+    private val _escalaEmEdicao = MutableStateFlow<EscalaCulto?>(null)
+    val escalaEmEdicao: StateFlow<EscalaCulto?> = _escalaEmEdicao.asStateFlow()
 
     private val _musicas = MutableStateFlow<List<Musica>>(emptyList())
     val musicas: StateFlow<List<Musica>> = _musicas.asStateFlow()
+
+    private val _todasMusicas = MutableStateFlow<List<Musica>>(emptyList())
+    val todasMusicas: StateFlow<List<Musica>> = _todasMusicas.asStateFlow()
 
     private val _consulta = MutableStateFlow("")
     val consulta: StateFlow<String> = _consulta.asStateFlow()
@@ -88,9 +107,148 @@ class MainViewModel(
     private val _mensagemAlerta = MutableStateFlow<String?>(null)
     val mensagemAlerta: StateFlow<String?> = _mensagemAlerta.asStateFlow()
 
+    val temaEscuro: StateFlow<Boolean> = userPreferencesRepository.temaEscuro
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val escalaFonte: StateFlow<Float> = userPreferencesRepository.escalaFonte
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+
+    val urlGistRemota: StateFlow<String> = userPreferencesRepository.urlGistRemota
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val mostrarEstatisticas: StateFlow<Boolean> = userPreferencesRepository.mostrarEstatisticas
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun alterarMostrarEstatisticas(ativo: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.salvarMostrarEstatisticas(ativo)
+        }
+    }
+
+    val estatisticasMusicas: StateFlow<List<EstatisticaMusica>> = combine(_escalas, _musicas) { escalasList, musicasList ->
+        val mapaUso = mutableMapOf<String, Int>()
+        val mapaMesAno = mutableMapOf<String, MutableMap<String, Int>>()
+        val mapaMinistros = mutableMapOf<String, MutableMap<String, Int>>()
+        val mapaCantores = mutableMapOf<String, MutableMap<String, Int>>()
+
+        for (escala in escalasList) {
+            val mesAno = escala.dataCulto.takeIf { it.length >= 7 }?.let {
+                val parts = it.split("-")
+                if (parts.size == 3) "${parts[1]}/${parts[0]}" else "Geral"
+            } ?: "Geral"
+
+            for (item in escala.itens) {
+                val titulo = item.tituloMusica.trim()
+                if (titulo.isNotEmpty()) {
+                    mapaUso[titulo] = (mapaUso[titulo] ?: 0) + 1
+                    mapaMesAno.getOrPut(titulo) { mutableMapOf() }.let { m ->
+                        m[mesAno] = (m[mesAno] ?: 0) + 1
+                    }
+                    if (escala.nomeMinistro.isNotBlank()) {
+                        mapaMinistros.getOrPut(titulo) { mutableMapOf() }.let { m ->
+                            m[escala.nomeMinistro] = (m[escala.nomeMinistro] ?: 0) + 1
+                        }
+                    }
+                    if (item.cantor.isNotBlank()) {
+                        mapaCantores.getOrPut(titulo) { mutableMapOf() }.let { m ->
+                            m[item.cantor] = (m[item.cantor] ?: 0) + 1
+                        }
+                    }
+                }
+            }
+        }
+
+        musicasList.map { musica ->
+            val titulo = musica.titulo
+            val total = mapaUso[titulo] ?: 0
+            val mesAnoMap = mapaMesAno[titulo] ?: emptyMap()
+            val ministroTop = mapaMinistros[titulo]?.maxByOrNull { it.value }?.key ?: "N/D"
+            val cantorTop = mapaCantores[titulo]?.maxByOrNull { it.value }?.key ?: "N/D"
+
+            EstatisticaMusica(
+                tituloMusica = titulo,
+                totalUso = total,
+                repeticoesPorMesAno = mesAnoMap,
+                ministroMaisFrequente = ministroTop,
+                cantorMaisFrequente = cantorTop
+            )
+        }.sortedByDescending { it.totalUso }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         recarregar()
         sincronizarGistSilencioso()
+        carregarEscalasCulto()
+        carregarTodasMusicas()
+    }
+
+    fun carregarTodasMusicas() {
+        viewModelScope.launch {
+            try {
+                val letras = repository.listarMusicas("", ModoDeBusca.LETRA)
+                val cifras = repository.listarMusicas("", ModoDeBusca.CIFRA)
+                _todasMusicas.value = (letras + cifras).distinctBy { it.titulo.lowercase().trim() }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun navegarPara(tela: TelaDestino) {
+        _telaAtual.value = tela
+        if (tela == TelaDestino.LISTA_LETRAS) {
+            atualizarModoBusca(ModoDeBusca.LETRA)
+        } else if (tela == TelaDestino.LISTA_CIFRAS) {
+            atualizarModoBusca(ModoDeBusca.CIFRA)
+        }
+    }
+
+    fun carregarEscalasCulto() {
+        viewModelScope.launch {
+            try {
+                _escalas.value = cultoRepository.listarEscalas()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun abrirCriacaoCulto() {
+        _escalaEmEdicao.value = null
+        _telaAtual.value = TelaDestino.CADASTRO_CULTO
+    }
+
+    fun abrirEdicaoCulto(escala: EscalaCulto) {
+        _escalaEmEdicao.value = escala
+        _telaAtual.value = TelaDestino.CADASTRO_CULTO
+    }
+
+    fun salvarEscalaCulto(escala: EscalaCulto, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val escalaFinal = if (_escalaEmEdicao.value != null) {
+                    escala.copy(id = _escalaEmEdicao.value!!.id)
+                } else {
+                    escala
+                }
+                cultoRepository.salvarEscala(escalaFinal)
+                carregarEscalasCulto()
+                _escalaEmEdicao.value = null
+                _mensagemAlerta.value = "Louvores do culto salvos com sucesso!"
+                onSuccess()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao salvar no Firebase: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun excluirCulto(id: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                cultoRepository.excluirEscala(id)
+                carregarEscalasCulto()
+                _mensagemAlerta.value = "Culto excluído com sucesso do banco de dados!"
+                onSuccess()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao excluir culto: ${e.localizedMessage}"
+            }
+        }
     }
 
     private fun sincronizarGistSilencioso() {
@@ -103,9 +261,7 @@ class MainViewModel(
                         recarregar()
                     }
                 }
-            } catch (_: Exception) {
-                // Silencioso em caso de estar offline ou sem internet
-            }
+            } catch (_: Exception) {}
         }
     }
 
@@ -155,17 +311,16 @@ class MainViewModel(
     }
 
     fun salvarRascunho(onSucesso: () -> Unit) {
-        val r = _rascunho.value
-        if (r.titulo.trim().isEmpty() || r.conteudo.trim().isEmpty()) {
-            _mensagemAlerta.value = "Informe o título e o conteúdo da música."
-            return
-        }
-
         viewModelScope.launch {
-            repository.salvarMusica(r, _musicaAberta.value?.identificador)
-            _editorVisivel.value = false
-            recarregar()
-            onSucesso()
+            try {
+                repository.salvarMusica(_rascunho.value, _musicaAberta.value?.identificador)
+                recarregar()
+                _editorVisivel.value = false
+                _mensagemAlerta.value = "Música salva com sucesso!"
+                onSucesso()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = e.localizedMessage ?: "Erro ao salvar música."
+            }
         }
     }
 
@@ -173,7 +328,7 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 val doc = DocumentExtractor.extrairDocumento(context, uri)
-                val texto = normalizarQuebrasDeLinha(doc.texto)
+                val texto = doc.texto
                 _musicaAberta.value = null
                 _rascunho.value = MusicaNova(
                     titulo = doc.tituloSugerido,
@@ -285,10 +440,11 @@ class MainViewModel(
 
 class MainViewModelFactory(
     private val repository: MusicaRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val escalaCultoDao: EscalaCultoDao? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return MainViewModel(repository, userPreferencesRepository) as T
+        return MainViewModel(repository, userPreferencesRepository, escalaCultoDao) as T
     }
 }

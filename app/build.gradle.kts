@@ -66,6 +66,10 @@ dependencies {
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation("com.google.firebase:firebase-firestore")
+
     // JSON & PDF & QR Code & CameraX
     implementation(libs.gson)
     implementation(libs.pdfbox.android)

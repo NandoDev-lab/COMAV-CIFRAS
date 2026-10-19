@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import com.nandohypesoft.comav.ui.culto.CadastroCultoScreen
+import com.nandohypesoft.comav.ui.estatisticas.EstatisticasScreen
+import com.nandohypesoft.comav.ui.home.HomeScreen
+import com.nandohypesoft.comav.ui.TelaDestino
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -118,6 +122,22 @@ fun MainScreen(viewModel: MainViewModel) {
     var mostrarSubMenuAbrirBackup by remember { mutableStateOf(false) }
     var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val telaAtual by viewModel.telaAtual.collectAsState()
+
+    if (telaAtual == TelaDestino.HOME) {
+        HomeScreen(viewModel = viewModel)
+        return
+    }
+
+    if (telaAtual == TelaDestino.CADASTRO_CULTO) {
+        CadastroCultoScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
+
+    if (telaAtual == TelaDestino.ESTATISTICAS) {
+        EstatisticasScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
 
     LaunchedEffect(mensagemAlerta) {
         mensagemAlerta?.let { msg ->
@@ -154,59 +174,37 @@ fun MainScreen(viewModel: MainViewModel) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            TextButton(
+                onClick = { viewModel.navegarPara(TelaDestino.HOME) },
+                modifier = Modifier.padding(bottom = 4.dp)
+            ) {
+                Text("← Voltar ao Início", fontWeight = FontWeight.Bold)
+            }
+
             // Cabeçalho
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Column {
-                        Text(
-                            text = "COMAV",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "Cifras e letras offline",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = {
-                        senhaAdminDigitada = ""
-                        erroSenhaAdmin = false
-                        mostrarDialogoSenhaAdmin = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Painel Administrativo",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(onClick = { mostrarDialogoCompartilharQr = true }) {
-                        Icon(
-                            imageVector = Icons.Default.QrCode,
-                            contentDescription = "Compartilhar Banco via QR Code",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Switch(
-                        checked = temaEscuro,
-                        onCheckedChange = { viewModel.alterarTema(it) }
+                Column {
+                    Text(
+                        text = if (viewModel.modoBusca.collectAsState().value == ModoDeBusca.CIFRA) "Lista de Cifras" else "Lista de Letras",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Cifras e letras offline",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Switch(
+                    checked = temaEscuro,
+                    onCheckedChange = { viewModel.alterarTema(it) }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -229,23 +227,15 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Seletor do Modo de Busca
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ModoBuscaBotao(
-                    texto = "Letras",
-                    ativo = modoBusca == ModoDeBusca.LETRA,
-                    onClick = { viewModel.atualizarModoBusca(ModoDeBusca.LETRA) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModoBuscaBotao(
-                    texto = "Cifras",
-                    ativo = modoBusca == ModoDeBusca.CIFRA,
-                    onClick = { viewModel.atualizarModoBusca(ModoDeBusca.CIFRA) },
-                    modifier = Modifier.weight(1f)
-                )
+            if (telaAtual == TelaDestino.LISTA_CIFRAS) {
+                OutlinedButton(
+                    onClick = { viewModel.navegarPara(TelaDestino.LISTA_LETRAS) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("🎵 Ir para Lista de Letras")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             Spacer(modifier = Modifier.height(12.dp))

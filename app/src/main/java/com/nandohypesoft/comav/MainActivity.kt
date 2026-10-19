@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         val userPreferencesRepository = UserPreferencesRepository(applicationContext)
 
         val viewModel: MainViewModel by viewModels {
-            MainViewModelFactory(repository, userPreferencesRepository)
+            MainViewModelFactory(repository, userPreferencesRepository, database.escalaCultoDao())
         }
 
         setContent {
