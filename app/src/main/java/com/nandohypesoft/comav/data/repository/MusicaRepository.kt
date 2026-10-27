@@ -9,10 +9,14 @@ import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.MusicaNova
 import com.nandohypesoft.comav.model.TipoDeConteudo
 import com.nandohypesoft.comav.model.TipoDeOrigem
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MusicaRepository(
     private val musicaDao: MusicaDao,
@@ -64,12 +68,13 @@ class MusicaRepository(
 
     suspend fun listarMusicas(consulta: String = "", modo: ModoDeBusca = ModoDeBusca.LETRA): List<Musica> {
         val consultaLimpa = consulta.trim()
-        val consultaNormalizada = "%${normalizarTitulo(if (consultaLimpa.isEmpty()) consulta else consultaLimpa)}%"
+        val termoSemHash = consultaLimpa.removePrefix("#").trim()
+        val consultaNormalizada = "%${normalizarTitulo(if (termoSemHash.isEmpty()) consulta else termoSemHash)}%"
 
         val entidades = musicaDao.buscarMusicas(
             tipoDeConteudo = modo.name,
             consultaNormalizada = consultaNormalizada,
-            consultaLimpa = "%$consultaLimpa%"
+            consultaLimpa = "%$termoSemHash%"
         )
 
         val musicas = entidades.map { it.toMusica() }
@@ -87,8 +92,9 @@ class MusicaRepository(
         }
 
         return musicas.filter { musica ->
+            musica.identificador.toString() == termoSemHash ||
             normalizarTitulo(musica.titulo).contains(normalizarTitulo(consultaLimpa)) ||
-                    correspondeAConsultaDeCifra(musica.conteudo, consultaLimpa)
+            correspondeAConsultaDeCifra(musica.conteudo, consultaLimpa)
         }
     }
 
@@ -97,8 +103,17 @@ class MusicaRepository(
         val tituloLimpo = musicaNova.titulo.trim()
         val tituloNorm = normalizarTitulo(tituloLimpo)
 
+        val todas = musicaDao.obterTodasParaBackup()
+
+        val idFinal = if (identificador != null && identificador > 0L) {
+            identificador
+        } else {
+            val existenteMesmoTitulo = todas.find { it.tituloNormalizado == tituloNorm }
+            existenteMesmoTitulo?.identificador ?: ((todas.maxOfOrNull { it.identificador } ?: 0L) + 1L)
+        }
+
         val entity = MusicaEntity(
-            identificador = identificador ?: 0,
+            identificador = idFinal,
             titulo = tituloLimpo,
             tituloNormalizado = tituloNorm,
             conteudo = musicaNova.conteudo,
@@ -106,22 +121,19 @@ class MusicaRepository(
             tipoDeConteudo = musicaNova.tipoDeConteudo.name,
             tipoDeOrigem = musicaNova.tipoDeOrigem.name,
             nomeArquivoOrigem = musicaNova.nomeDoArquivoDeOrigem,
-            criadaEm = seNaoDefinidoCriadaEm(identificador, agora),
+            criadaEm = seNaoDefinidoCriadaEm(todas, idFinal, musicaNova.tipoDeConteudo.name, agora),
             atualizadaEm = agora
         )
 
         musicaDao.salvar(entity)
     }
 
-    private suspend fun seNaoDefinidoCriadaEm(identificador: Long?, fallback: Long): Long {
-        if (identificador == null || identificador == 0L) return fallback
-        // Em atualizacao, mantem o timestamp existente se achar
-        val todas = musicaDao.obterTodasParaBackup()
-        return todas.find { it.identificador == identificador }?.criadaEm ?: fallback
+    private fun seNaoDefinidoCriadaEm(todas: List<MusicaEntity>, id: Long, tipo: String, fallback: Long): Long {
+        return todas.find { it.identificador == id && it.tipoDeConteudo == tipo }?.criadaEm ?: fallback
     }
 
-    suspend fun excluirMusica(identificador: Long) {
-        musicaDao.excluir(identificador)
+    suspend fun excluirMusica(identificador: Long, tipoDeConteudo: TipoDeConteudo) {
+        musicaDao.excluir(identificador, tipoDeConteudo.name)
     }
 
     suspend fun exportarBanco(): BackupMusicas {
@@ -145,14 +157,75 @@ class MusicaRepository(
             throw IllegalArgumentException("O arquivo selecionado não é um backup COMAV válido.")
         }
 
-        val entidades = backup.musicas.map { musica ->
-            MusicaEntity.fromMusica(
-                musica = musica,
-                tituloNormalizado = normalizarTitulo(musica.titulo)
-            )
+        val tituloParaId = mutableMapOf<String, Long>()
+        var proximoId = 1L
+
+        backup.musicas.forEach { musica ->
+            val norm = normalizarTitulo(musica.titulo)
+            if (norm.isNotBlank() && musica.identificador > 0L && !tituloParaId.containsKey(norm)) {
+                tituloParaId[norm] = musica.identificador
+                if (musica.identificador >= proximoId) {
+                    proximoId = musica.identificador + 1L
+                }
+            }
         }
 
-        musicaDao.salvarTodas(entidades)
-        return entidades.size
+        val locaisAtuais = musicaDao.obterTodasParaBackup().associateBy { Pair(it.identificador, it.tipoDeConteudo) }
+        val entidadesParaSalvar = mutableListOf<MusicaEntity>()
+
+        backup.musicas.forEach { musica ->
+            val norm = normalizarTitulo(musica.titulo)
+            val idFinal = tituloParaId.getOrPut(norm) { proximoId++ }
+            val tipoStr = musica.tipoDeConteudo.name
+
+            val chave = Pair(idFinal, tipoStr)
+            val localExistente = locaisAtuais[chave]
+
+            val atualizadaEmFinal = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
+            val criadaEmFinal = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis()
+
+            // Proteção contra sobrescrita: se a alteração local for mais recente que a do Gist remoto, preserva a local!
+            if (localExistente != null && localExistente.atualizadaEm > atualizadaEmFinal) {
+                entidadesParaSalvar.add(localExistente)
+            } else {
+                entidadesParaSalvar.add(
+                    MusicaEntity(
+                        identificador = idFinal,
+                        titulo = musica.titulo.trim(),
+                        tituloNormalizado = norm,
+                        conteudo = musica.conteudo,
+                        conteudoOriginal = musica.conteudoOriginal,
+                        tipoDeConteudo = tipoStr,
+                        tipoDeOrigem = musica.tipoDeOrigem.name,
+                        nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
+                        criadaEm = if (localExistente != null) localExistente.criadaEm else criadaEmFinal,
+                        atualizadaEm = atualizadaEmFinal
+                    )
+                )
+            }
+        }
+
+        musicaDao.salvarTodas(entidadesParaSalvar)
+        return entidadesParaSalvar.size
+    }
+
+    suspend fun sincronizarComGistRemoto(urlGist: String): Int = withContext(Dispatchers.IO) {
+        val urlLimpa = urlGist.trim()
+        if (urlLimpa.isEmpty()) {
+            throw IllegalArgumentException("A URL do Gist não foi configurada.")
+        }
+
+        val jsonTexto = try {
+            val url = URL(urlLimpa)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            connection.requestMethod = "GET"
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Falha ao conectar ao Gist remoto: ${e.localizedMessage}")
+        }
+
+        importarBanco(jsonTexto)
     }
 }

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -14,14 +15,24 @@ android {
         applicationId = "com.nandohypesoft.comav"
         minSdk = 34
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("comav-release.jks")
+            storePassword = "Fer1324NandoVig"
+            keyAlias = "comav"
+            keyPassword = "Fer1324NandoVig"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = false
             }
@@ -56,9 +67,18 @@ dependencies {
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // JSON & PDF
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation("com.google.firebase:firebase-firestore")
+
+    // JSON & PDF & QR Code & CameraX
     implementation(libs.gson)
     implementation(libs.pdfbox.android)
+    implementation(libs.zxing.core)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

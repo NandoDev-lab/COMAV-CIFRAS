@@ -1,8 +1,11 @@
 package com.nandohypesoft.comav.ui
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,18 +13,47 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import com.nandohypesoft.comav.ui.culto.CadastroCultoScreen
+import com.nandohypesoft.comav.ui.estatisticas.EstatisticasScreen
+import com.nandohypesoft.comav.ui.home.HomeScreen
+import com.nandohypesoft.comav.ui.TelaDestino
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import java.util.UUID
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -74,10 +106,38 @@ fun MainScreen(viewModel: MainViewModel) {
     val rascunho by viewModel.rascunho.collectAsState()
     val temaEscuro by viewModel.temaEscuro.collectAsState()
     val escalaFonte by viewModel.escalaFonte.collectAsState()
+    val urlGistRemota by viewModel.urlGistRemota.collectAsState()
     val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
 
+    var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
+
     var musicaParaExcluir by remember { mutableStateOf<Musica?>(null) }
+    var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
+    var mostrarModoProjetor by remember { mutableStateOf(false) }
+    var mostrarPainelAdmin by remember { mutableStateOf(false) }
+    var mostrarDialogoSenhaAdmin by remember { mutableStateOf(false) }
+    var senhaAdminDigitada by remember { mutableStateOf("") }
+    var erroSenhaAdmin by remember { mutableStateOf(false) }
+    var modoExclusaoHabilitado by remember { mutableStateOf(false) }
+    var mostrarSubMenuAbrirBackup by remember { mutableStateOf(false) }
+    var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val telaAtual by viewModel.telaAtual.collectAsState()
+
+    if (telaAtual == TelaDestino.HOME) {
+        HomeScreen(viewModel = viewModel)
+        return
+    }
+
+    if (telaAtual == TelaDestino.CADASTRO_CULTO) {
+        CadastroCultoScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
+
+    if (telaAtual == TelaDestino.ESTATISTICAS) {
+        EstatisticasScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
 
     LaunchedEffect(mensagemAlerta) {
         mensagemAlerta?.let { msg ->
@@ -114,6 +174,13 @@ fun MainScreen(viewModel: MainViewModel) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            TextButton(
+                onClick = { viewModel.navegarPara(TelaDestino.HOME) },
+                modifier = Modifier.padding(bottom = 4.dp)
+            ) {
+                Text("← Voltar ao Início", fontWeight = FontWeight.Bold)
+            }
+
             // Cabeçalho
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -122,7 +189,7 @@ fun MainScreen(viewModel: MainViewModel) {
             ) {
                 Column {
                     Text(
-                        text = "COMAV",
+                        text = if (viewModel.modoBusca.collectAsState().value == ModoDeBusca.CIFRA) "Lista de Cifras" else "Lista de Letras",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -134,29 +201,19 @@ fun MainScreen(viewModel: MainViewModel) {
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Tema escuro",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Switch(
-                        checked = temaEscuro,
-                        onCheckedChange = { viewModel.alterarTema(it) }
-                    )
-                }
+                Switch(
+                    checked = temaEscuro,
+                    onCheckedChange = { viewModel.alterarTema(it) }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Campo de Busca
             val placeholderTexto = if (modoBusca == ModoDeBusca.CIFRA) {
-                "Buscar acorde ou título (ex.: Am G C)"
+                "Buscar nº (#12), acorde (Am G) ou título"
             } else {
-                "Buscar trecho da letra ou título"
+                "Buscar nº (#12), trecho ou título"
             }
 
             OutlinedTextField(
@@ -170,81 +227,26 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Seletor do Modo de Busca
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ModoBuscaBotao(
-                    texto = "Letras",
-                    ativo = modoBusca == ModoDeBusca.LETRA,
-                    onClick = { viewModel.atualizarModoBusca(ModoDeBusca.LETRA) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModoBuscaBotao(
-                    texto = "Cifras",
-                    ativo = modoBusca == ModoDeBusca.CIFRA,
-                    onClick = { viewModel.atualizarModoBusca(ModoDeBusca.CIFRA) },
-                    modifier = Modifier.weight(1f)
-                )
+            if (telaAtual == TelaDestino.LISTA_CIFRAS) {
+                OutlinedButton(
+                    onClick = { viewModel.navegarPara(TelaDestino.LISTA_LETRAS) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("🎵 Ir para Lista de Letras")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botões de Ação
-            Row(
+            // Botão de Nova Música
+            Button(
+                onClick = { viewModel.abrirCriacao() },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Button(
-                    onClick = { viewModel.abrirCriacao() },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("+ Nova música")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        launcherImportarDoc.launch(
-                            arrayOf(
-                                "application/pdf",
-                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            )
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Importar DOCX/PDF")
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                        val nomePadrao = "comav-backup-${dateFormat.format(Date())}.json"
-                        launcherExportarBackup.launch(nomePadrao)
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Exportar backup")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        launcherImportarBackup.launch(arrayOf("application/json"))
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Abrir backup")
-                }
+                Text("+ Nova música")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -313,13 +315,30 @@ fun MainScreen(viewModel: MainViewModel) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = musica.titulo,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = "Nº ${musica.identificador}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = musica.titulo,
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     val tipoTexto = if (musica.tipoDeConteudo == TipoDeConteudo.CIFRA) "Cifra" else "Letra"
                                     Text(
@@ -329,10 +348,12 @@ fun MainScreen(viewModel: MainViewModel) {
                                     )
                                 }
 
-                                TextButton(
-                                    onClick = { musicaParaExcluir = musica }
-                                ) {
-                                    Text("Excluir", color = MaterialTheme.colorScheme.error)
+                                if (modoExclusaoHabilitado) {
+                                    TextButton(
+                                        onClick = { musicaParaExcluir = musica }
+                                    ) {
+                                        Text("Excluir", color = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
                         }
@@ -351,7 +372,7 @@ fun MainScreen(viewModel: MainViewModel) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.excluirMusica(musica.identificador)
+                        viewModel.excluirMusica(musica)
                         musicaParaExcluir = null
                     }
                 ) {
@@ -368,6 +389,85 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // Modal Visualizador
     if (visualizadorVisivel && musicaAberta != null) {
+        var ativarQuebraAutomatica by remember { mutableStateOf(false) }
+        var modoTelaInteira by remember { mutableStateOf(false) }
+
+        if (modoTelaInteira) {
+            val configuration = LocalConfiguration.current
+            val screenWidthDp = configuration.screenWidthDp
+            val maxLineLength = remember(musicaAberta!!.conteudo) {
+                musicaAberta!!.conteudo.split("\n").maxOfOrNull { it.length } ?: 30
+            }
+            val autoFitScale = remember(maxLineLength, screenWidthDp) {
+                if (maxLineLength > 0) {
+                    (screenWidthDp.toFloat() / (maxLineLength * 9.5f)).coerceIn(0.4f, 1.8f)
+                } else {
+                    1.0f
+                }
+            }
+
+            Dialog(
+                onDismissRequest = { modoTelaInteira = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = musicaAberta!!.titulo,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = { modoTelaInteira = false },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Sair Tela Cheia", fontSize = 11.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState()),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                Text(
+                                    text = musicaAberta!!.conteudo,
+                                    fontSize = (18 * autoFitScale).sp,
+                                    lineHeight = (26 * autoFitScale).sp,
+                                    fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Dialog(
             onDismissRequest = { viewModel.fecharVisualizador() },
             properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -388,8 +488,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = musicaAberta!!.titulo,
-                                fontSize = 24.sp,
+                                text = "Nº ${musicaAberta!!.identificador} · ${musicaAberta!!.titulo}",
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -402,26 +502,277 @@ fun MainScreen(viewModel: MainViewModel) {
                             )
                         }
 
-                        TextButton(onClick = { viewModel.fecharVisualizador() }) {
-                            Text("Fechar")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { modoTelaInteira = true },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Tela Cheia", fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { mostrarModoProjetor = true },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Transmitir", fontSize = 12.sp)
+                            }
+
+                            TextButton(onClick = { viewModel.fecharVisualizador() }) {
+                                Text("Fechar")
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Controles de Fonte na Leitura (Letras e Cifras)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tamanho da fonte:",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.alterarEscala(escalaFonte - 0.1f) },
+                                    enabled = escalaFonte > 0.71f,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("A−", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Text(
+                                    text = "${(escalaFonte * 100).toInt()}%",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                OutlinedButton(
+                                    onClick = { viewModel.alterarEscala(escalaFonte + 0.1f) },
+                                    enabled = escalaFonte < 1.81f,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("A+", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Toggle Quebra Automática C(n)/L(n)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Modo Quebra Automática C(n)/L(n):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = ativarQuebraAutomatica,
+                            onCheckedChange = { ativarQuebraAutomatica = it }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val configuration = LocalConfiguration.current
+                    val screenWidthDp = configuration.screenWidthDp
+
+                    val blocos = remember(musicaAberta!!.conteudo, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
+                        if (ativarQuebraAutomatica) {
+                            val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, 45)
+                            QuebraAutomatica.quebraInteligente(musicaAberta!!.conteudo, maxChars = maxC)
+                        } else {
+                            emptyList()
+                        }
+                    }
+                    val linhasNormais = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
+                    val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
+                    val listState = rememberLazyListState()
+                    val coroutineScope = rememberCoroutineScope()
+
+                    if (secoes.isNotEmpty()) {
+                        Text(
+                            text = "Atalhos rápidos:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            secoes.forEach { secao ->
+                                Surface(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(secao.indiceLinha)
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = secao.titulo,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
+                            .then(if (ehCifra) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
                     ) {
-                        SelectionContainer {
-                            Text(
-                                text = musicaAberta!!.conteudo,
-                                fontSize = (18 * escalaFonte).sp,
-                                lineHeight = (28 * escalaFonte).sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (ativarQuebraAutomatica) {
+                                items(blocos) { bloco ->
+                                    if (bloco.isHeader) {
+                                        Text(
+                                            text = bloco.cifra,
+                                            fontSize = (20 * escalaFonte).sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 6.dp)
+                                        )
+                                    } else if (bloco.cifra.isBlank() && bloco.letra.isBlank()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 3.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (bloco.cifra.isNotBlank()) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = MaterialTheme.colorScheme.primaryContainer
+                                                        ) {
+                                                            Text(
+                                                                text = " C(${bloco.indice}) ",
+                                                                fontSize = (11 * escalaFonte).sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                            )
+                                                        }
+                                                        SelectionContainer {
+                                                            Text(
+                                                                text = bloco.cifra,
+                                                                fontSize = (18 * escalaFonte).sp,
+                                                                lineHeight = (26 * escalaFonte).sp,
+                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                if (bloco.letra.isNotBlank()) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                                        ) {
+                                                            Text(
+                                                                text = " L(${bloco.indice}) ",
+                                                                fontSize = (11 * escalaFonte).sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                            )
+                                                        }
+                                                        SelectionContainer {
+                                                            Text(
+                                                                text = bloco.letra,
+                                                                fontSize = (18 * escalaFonte).sp,
+                                                                lineHeight = (26 * escalaFonte).sp,
+                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                                color = MaterialTheme.colorScheme.onBackground
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                itemsIndexed(linhasNormais) { index, linha ->
+                                    val isHeader = secoes.any { it.indiceLinha == index }
+                                    SelectionContainer {
+                                        Text(
+                                            text = if (linha.isEmpty()) " " else linha,
+                                            fontSize = (18 * escalaFonte).sp,
+                                            lineHeight = (28 * escalaFonte).sp,
+                                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                            fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                            softWrap = !ehCifra,
+                                            color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier
+                                                .padding(vertical = if (isHeader) 4.dp else 1.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -532,6 +883,577 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
     }
+
+    // Diálogo Compartilhar App & Banco (QR Code)
+    if (mostrarDialogoCompartilharQr) {
+        val uniqueSessionId = remember { "COMAV_SHARE_${UUID.randomUUID().toString().substring(0, 8).uppercase()}" }
+        val qrBitmap = remember { gerarQrCodeBitmap(uniqueSessionId) }
+
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoCompartilharQr = false },
+            title = { Text("Compartilhar App & Banco (QR)") },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "ID Único de Sincronização:\n$uniqueSessionId",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (qrBitmap != null) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "QR Code de Compartilhamento",
+                            modifier = Modifier.size(180.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Para enviar o banco de dados completo (todas as 94 cifras e 89 letras) para outro dispositivo, exporte o arquivo de backup e compartilhe-o.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        launcherExportarBackup.launch("comav_backup_completo.json")
+                        mostrarDialogoCompartilharQr = false
+                    }
+                ) {
+                    Text("Exportar Banco p/ Compartilhar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoCompartilharQr = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
+    }
+
+    // Modal Modo Projetor / Transmissão de Tela
+    if (mostrarModoProjetor && musicaAberta != null) {
+        val sessionSongId = remember { "COMAV_CAST_${UUID.randomUUID().toString().substring(0, 6).uppercase()}" }
+        val qrCastBitmap = remember { gerarQrCodeBitmap(sessionSongId) }
+
+        Dialog(
+            onDismissRequest = { mostrarModoProjetor = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = androidx.compose.ui.graphics.Color.Black
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = musicaAberta!!.titulo,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Modo Transmissão • ID: $sessionSongId",
+                                fontSize = 12.sp,
+                                color = androidx.compose.ui.graphics.Color.LightGray
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (qrCastBitmap != null) {
+                                Image(
+                                    bitmap = qrCastBitmap.asImageBitmap(),
+                                    contentDescription = "QR Cast",
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                            TextButton(onClick = { mostrarModoProjetor = false }) {
+                                Text("Sair", color = androidx.compose.ui.graphics.Color.Red)
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = musicaAberta!!.conteudo,
+                            fontSize = (26 * escalaFonte).sp,
+                            lineHeight = (38 * escalaFonte).sp,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+
+                    Text(
+                        text = "COMAV • Transmissão ao Vivo",
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        }
+    }
+
+    // Diálogo de Senha Administrativa
+    if (mostrarDialogoSenhaAdmin) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoSenhaAdmin = false },
+            title = { Text("Acesso Administrativo") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Informe a senha para acessar o painel:", fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = senhaAdminDigitada,
+                        onValueChange = {
+                            senhaAdminDigitada = it
+                            erroSenhaAdmin = false
+                        },
+                        placeholder = { Text("Senha") },
+                        singleLine = true,
+                        isError = erroSenhaAdmin,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (erroSenhaAdmin) {
+                        Text(
+                            text = "Senha incorreta!",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (senhaAdminDigitada == "27021986") {
+                            mostrarDialogoSenhaAdmin = false
+                            mostrarPainelAdmin = true
+                        } else {
+                            erroSenhaAdmin = true
+                        }
+                    }
+                ) {
+                    Text("Acessar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoSenhaAdmin = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Painel Administrativo
+    if (mostrarPainelAdmin) {
+        AlertDialog(
+            onDismissRequest = { mostrarPainelAdmin = false },
+            title = { Text("Painel Administrativo") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        onClick = { modoExclusaoHabilitado = !modoExclusaoHabilitado },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (modoExclusaoHabilitado) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (modoExclusaoHabilitado) "Modo Exclusão: Ativo" else "Modo Exclusão: Inativo",
+                                fontWeight = FontWeight.Bold,
+                                color = if (modoExclusaoHabilitado) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Switch(
+                                checked = modoExclusaoHabilitado,
+                                onCheckedChange = { modoExclusaoHabilitado = it }
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            launcherImportarDoc.launch(arrayOf("*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Importar DOCX / PDF")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            launcherExportarBackup.launch("comav_backup.json")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Exportar Backup")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarDialogoCompartilharQr = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Compartilhar Banco (QR Code)")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarSubMenuAbrirBackup = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Abrir Backup")
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Sincronização Remota via Gist:",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    OutlinedTextField(
+                        value = inputUrlGist,
+                        onValueChange = {
+                            inputUrlGist = it
+                            viewModel.salvarUrlGistRemota(it)
+                        },
+                        placeholder = { Text("URL Raw do Gist (https://gist...)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            viewModel.sincronizarComGist()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("🔄 Sincronizar Banco do Gist")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarPainelAdmin = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
+    }
+
+    // Submenu Abrir Backup
+    if (mostrarSubMenuAbrirBackup) {
+        AlertDialog(
+            onDismissRequest = { mostrarSubMenuAbrirBackup = false },
+            title = { Text("Abrir Backup") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            mostrarSubMenuAbrirBackup = false
+                            launcherImportarBackup.launch(arrayOf("application/json", "*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Armazenamento Interno")
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarSubMenuAbrirBackup = false
+                            mostrarLeitorQrCode = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("QR Code")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarSubMenuAbrirBackup = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Leitor de QR Code Dialog
+    if (mostrarLeitorQrCode) {
+        QrCodeScannerDialog(
+            onScanResult = { resultText ->
+                mostrarLeitorQrCode = false
+                viewModel.importarBackupTexto(resultText)
+            },
+            onDismiss = { mostrarLeitorQrCode = false }
+        )
+    }
+}
+
+fun gerarQrCodeBitmap(conteudo: String, largura: Int = 512, altura: Int = 512): Bitmap? {
+    return try {
+        val writer = QRCodeWriter()
+        val bitMatrix = writer.encode(conteudo, BarcodeFormat.QR_CODE, largura, altura)
+        val bmp = Bitmap.createBitmap(largura, altura, Bitmap.Config.RGB_565)
+        for (x in 0 until largura) {
+            for (y in 0 until altura) {
+                bmp.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+        bmp
+    } catch (e: Exception) {
+        null
+    }
+}
+
+@Composable
+fun QrCodeScannerDialog(
+    onScanResult: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Leitor de QR Code",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("Fechar")
+                    }
+                }
+
+                if (hasCameraPermission) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                val previewView = androidx.camera.view.PreviewView(ctx)
+                                val cameraProviderFuture = androidx.camera.lifecycle.ProcessCameraProvider.getInstance(ctx)
+
+                                cameraProviderFuture.addListener({
+                                    val cameraProvider = cameraProviderFuture.get()
+                                    val preview = androidx.camera.core.Preview.Builder().build().also {
+                                        it.setSurfaceProvider(previewView.surfaceProvider)
+                                    }
+
+                                    val imageAnalyzer = androidx.camera.core.ImageAnalysis.Builder()
+                                        .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                        .build()
+                                        .also { analysis ->
+                                            analysis.setAnalyzer(
+                                                ContextCompat.getMainExecutor(ctx),
+                                                QrCodeAnalyzer { qrResult ->
+                                                    onScanResult(qrResult)
+                                                }
+                                            )
+                                        }
+
+                                    try {
+                                        cameraProvider.unbindAll()
+                                        cameraProvider.bindToLifecycle(
+                                            lifecycleOwner,
+                                            androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA,
+                                            preview,
+                                            imageAnalyzer
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                }, ContextCompat.getMainExecutor(ctx))
+
+                                previewView
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Permissão de câmera necessária para ler QR Code.")
+                    }
+                }
+
+                Text(
+                    text = "Aponte a câmera para o QR Code de backup.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+class QrCodeAnalyzer(
+    private val onQrCodeScanned: (String) -> Unit
+) : androidx.camera.core.ImageAnalysis.Analyzer {
+    private val reader = com.google.zxing.MultiFormatReader().apply {
+        setHints(
+            mapOf(
+                com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to listOf(com.google.zxing.BarcodeFormat.QR_CODE)
+            )
+        )
+    }
+
+    override fun analyze(image: androidx.camera.core.ImageProxy) {
+        val buffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        val width = image.width
+        val height = image.height
+
+        val source = com.google.zxing.PlanarYUVLuminanceSource(
+            bytes, width, height, 0, 0, width, height, false
+        )
+        val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+        try {
+            val result = reader.decode(binaryBitmap)
+            onQrCodeScanned(result.text)
+        } catch (_: Exception) {
+        } finally {
+            image.close()
+        }
+    }
+}
+
+data class SecaoCifra(
+    val titulo: String,
+    val indiceLinha: Int
+)
+
+fun detectarSecoesCifra(conteudo: String): List<SecaoCifra> {
+    val linhas = conteudo.split("\n")
+    val secoes = mutableListOf<SecaoCifra>()
+    
+    val regexSecao = Regex("^\\[?(intro|introducao|introdução|refrao|refrão|coro|ponte|bridge|solo|verso|verse|pre-refrao|pré-refrão|outro|final|instrumental)\\d*\\b", RegexOption.IGNORE_CASE)
+    
+    for ((index, linha) in linhas.withIndex()) {
+        val linhaLimpa = linha.trim()
+        if (linhaLimpa.isEmpty()) continue
+        
+        val semColchetes = linhaLimpa.removeSurrounding("[", "]").removeSurrounding("(", ")").trim()
+        val eCabecalho = semColchetes.length <= 35 && (
+            regexSecao.containsMatchIn(linhaLimpa) ||
+            semColchetes.endsWith(":") ||
+            (linhaLimpa.startsWith("[") && linhaLimpa.endsWith("]")) ||
+            (linhaLimpa.startsWith("(") && linhaLimpa.endsWith(")"))
+        )
+        
+        if (eCabecalho) {
+            val nomeSecao = semColchetes.removeSuffix(":").trim()
+            if (nomeSecao.isNotBlank()) {
+                secoes.add(SecaoCifra(titulo = nomeSecao, indiceLinha = index))
+            }
+        }
+    }
+    return secoes
 }
 
 @Composable
