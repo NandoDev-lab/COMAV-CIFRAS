@@ -165,10 +165,6 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
         }
     }
 
-    val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
-    val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
-    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
-
     val equipeCantores = listOf("Pastora Val", "Maisa", "Isabele", "Daniel", "Fernando", "Nanda", "Fabiana")
 
     val itensForm = remember {
@@ -388,36 +384,66 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            Text(
-                text = "Escala de Músicos (Instrumentos)",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Seção Somente Leitura da Escala de Músicos
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "🎸 Equipe de Instrumentistas (Consulta da Data)",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Os músicos são definidos no Calendário pelo Administrador:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-            SeletorMusicoSpinner(
-                label = "Teclado",
-                icone = "🎹",
-                musicoSelecionado = tecladista,
-                opcoesMusicos = opcoesTeclado,
-                onMusicoSelecionado = { tecladista = it }
-            )
+                    val tecladistaExibicao = escalaMusicoDataAutobuscada?.tecladista?.takeIf { it.isNotBlank() }
+                        ?: tecladista.takeIf { it.isNotBlank() } ?: "Pendente no calendário"
+                    val violonistaExibicao = escalaMusicoDataAutobuscada?.violonista?.takeIf { it.isNotBlank() }
+                        ?: violonista.takeIf { it.isNotBlank() } ?: "Pendente no calendário"
+                    val bateristaExibicao = escalaMusicoDataAutobuscada?.baterista?.takeIf { it.isNotBlank() }
+                        ?: baterista.takeIf { it.isNotBlank() } ?: "Pendente no calendário"
 
-            SeletorMusicoSpinner(
-                label = "Violão",
-                icone = "🎸",
-                musicoSelecionado = violonista,
-                opcoesMusicos = opcoesViolao,
-                onMusicoSelecionado = { violonista = it }
-            )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🎹 Teclado:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(
+                            text = tecladistaExibicao,
+                            fontSize = 14.sp,
+                            fontWeight = if (tecladistaExibicao != "Pendente no calendário") FontWeight.Bold else FontWeight.Normal,
+                            color = if (tecladistaExibicao != "Pendente no calendário") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-            SeletorMusicoSpinner(
-                label = "Bateria",
-                icone = "🥁",
-                musicoSelecionado = baterista,
-                opcoesMusicos = opcoesBateria,
-                onMusicoSelecionado = { baterista = it }
-            )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🎸 Violão:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(
+                            text = violonistaExibicao,
+                            fontSize = 14.sp,
+                            fontWeight = if (violonistaExibicao != "Pendente no calendário") FontWeight.Bold else FontWeight.Normal,
+                            color = if (violonistaExibicao != "Pendente no calendário") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🥁 Bateria:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(
+                            text = bateristaExibicao,
+                            fontSize = 14.sp,
+                            fontWeight = if (bateristaExibicao != "Pendente no calendário") FontWeight.Bold else FontWeight.Normal,
+                            color = if (bateristaExibicao != "Pendente no calendário") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
