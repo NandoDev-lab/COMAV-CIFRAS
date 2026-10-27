@@ -1,6 +1,7 @@
 package com.nandohypesoft.comav.ui.home
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -34,6 +35,7 @@ import com.nandohypesoft.comav.ui.TelaDestino
 import com.nandohypesoft.comav.ui.components.DialogPerfilUsuario
 import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
+import com.nandohypesoft.comav.util.NotificacaoManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +55,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
+    var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
     var mostrarPainelAdmin by remember { mutableStateOf(false) }
     var mostrarDialogoSenhaAdmin by remember { mutableStateOf(false) }
     var senhaAdminDigitada by remember { mutableStateOf("") }
@@ -226,6 +229,17 @@ fun HomeScreen(viewModel: MainViewModel) {
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("📅 Calendário Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarDialogSimulacaoNotificacoes = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedTextField(
@@ -624,6 +638,80 @@ fun HomeScreen(viewModel: MainViewModel) {
         CalendarioEscalaMusicosDialog(
             viewModel = viewModel,
             onDismiss = { mostrarCalendarioMusicos = false }
+        )
+    }
+
+    if (mostrarDialogSimulacaoNotificacoes) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogSimulacaoNotificacoes = false },
+            title = {
+                Text("🔔 Teste e Simulação de Notificações", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Clique nos botões abaixo para disparar as notificações no seu aparelho e simular os cenários em tempo real:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Button(
+                        onClick = {
+                            NotificacaoManager.dispararNotificacaoLocal(
+                                context = context,
+                                titulo = "⚠️ Lembrete de Agendamento do Culto!",
+                                mensagem = "Ministro, você tem culto agendado para o próximo domingo. Por favor, informe os louvores até terça-feira!",
+                                notificationId = 8001
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text("1. Simular Alerta para Ministro (Pendência)", color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            NotificacaoManager.notificarAvisoMusicosNovoCulto(
+                                context = context,
+                                funcaoUsuario = TipoFuncaoEquipe.MUSICO,
+                                nomeMinistro = "Fernando",
+                                dataBr = "29/10/2026"
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    ) {
+                        Text("2. Simular Alerta para Músicos (Novo Culto)", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val funcao = tipoFuncaoEquipe
+                            NotificacaoManager.verificarEAgendarAlertas(
+                                context = context,
+                                funcaoUsuario = if (funcao == TipoFuncaoEquipe.NAO_DEFINIDO) TipoFuncaoEquipe.MINISTRO_CANTOR else funcao,
+                                escalasCulto = viewModel.escalas.value,
+                                escalasMusicosMap = viewModel.escalasMusicosDatas.value
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("3. Executar Regra de Checagem do Mês", fontSize = 13.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarDialogSimulacaoNotificacoes = false }) {
+                    Text("Fechar")
+                }
+            }
         )
     }
 
