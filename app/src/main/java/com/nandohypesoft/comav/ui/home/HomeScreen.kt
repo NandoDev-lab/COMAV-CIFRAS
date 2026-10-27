@@ -262,9 +262,9 @@ fun HomeScreen(viewModel: MainViewModel) {
         var violonistaEdicao by remember(escalaSelecionada) { mutableStateOf(escalaSelecionada?.violonista ?: "") }
         var bateristaEdicao by remember(escalaSelecionada) { mutableStateOf(escalaSelecionada?.baterista ?: "") }
 
-        val opcoesTeclado = listOf("Selecione...", "Lucas", "Mateus", "Gabriel", "Samuel", "Daniel", "Emanuel", "Outro...")
-        val opcoesViolao = listOf("Selecione...", "Fernando", "Daniel", "Rafael", "Felipe", "Rodrigo", "Gustavo", "Outro...")
-        val opcoesBateria = listOf("Selecione...", "João", "David", "Guilherme", "Pedro", "Marcos", "Lucas", "Outro...")
+        val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
+        val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
+        val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
 
         AlertDialog(
             onDismissRequest = { mostrarGerenciadorEscalaMusicos = false },
