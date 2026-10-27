@@ -96,22 +96,31 @@ fun HomeScreen(viewModel: MainViewModel) {
         }
     }
 
+    var perfilJaDefinido by remember { mutableStateOf(false) }
+
     LaunchedEffect(tipoFuncaoEquipe) {
         if (tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO) {
-            mostrarDialogPerfil = true
+            if (!perfilJaDefinido) {
+                mostrarDialogPerfil = true
+            }
         } else {
+            perfilJaDefinido = true
+            mostrarDialogPerfil = false
             viewModel.iniciarAgendadorWorkManager(context)
         }
     }
 
-    if (mostrarDialogPerfil || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO) {
+    if (mostrarDialogPerfil) {
         DialogPerfilUsuario(
             funcaoAtual = tipoFuncaoEquipe,
             onConfirmarFuncao = { novaFuncao ->
-                viewModel.salvarTipoFuncaoEquipe(context, novaFuncao)
+                perfilJaDefinido = true
                 mostrarDialogPerfil = false
+                viewModel.salvarTipoFuncaoEquipe(context, novaFuncao)
             },
-            onDismiss = { mostrarDialogPerfil = false }
+            onDismiss = {
+                mostrarDialogPerfil = false
+            }
         )
     }
 
