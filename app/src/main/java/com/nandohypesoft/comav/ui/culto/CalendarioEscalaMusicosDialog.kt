@@ -239,14 +239,16 @@ fun CalendarioEscalaMusicosDialog(
                     tempCal.set(Calendar.DAY_OF_MONTH, diaSelecionado!!)
                     val diaSemanaNome = when (tempCal.get(Calendar.DAY_OF_WEEK)) {
                         Calendar.SUNDAY -> "Domingo"
-                        Calendar.THURSDAY -> "Quarta/Quinta-feira"
+                        Calendar.THURSDAY -> "Quinta-feira"
                         else -> "Dia comum"
                     }
+
+                    val mesFormatado = String.format(Locale.US, "%02d", mesIndex + 1)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     Text(
-                        text = "Escala para $diaSelecionado/$numDoMes ($diaSemanaNome):",
+                        text = "Escala para $diaSelecionado/$mesFormatado ($diaSemanaNome):",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -301,6 +303,3 @@ fun CalendarioEscalaMusicosDialog(
         }
     )
 }
-
-private val numDoMes: String
-    get() = ""
