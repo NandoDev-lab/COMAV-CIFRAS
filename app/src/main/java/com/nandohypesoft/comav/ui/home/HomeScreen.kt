@@ -27,8 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.nandohypesoft.comav.model.EscalaCulto
 import com.nandohypesoft.comav.ui.MainViewModel
 import com.nandohypesoft.comav.ui.TelaDestino
+import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -52,6 +54,8 @@ fun HomeScreen(viewModel: MainViewModel) {
     var erroSenhaAdmin by remember { mutableStateOf(false) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
+    var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
+    var escalaParaDetalhes by remember { mutableStateOf<EscalaCulto?>(null) }
 
     val launcherImportarDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -126,7 +130,7 @@ fun HomeScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Painel Administrativo Completo (incluindo Gist Sync)
+    // Painel Administrativo Completo
     if (mostrarPainelAdmin) {
         AlertDialog(
             onDismissRequest = { mostrarPainelAdmin = false },
@@ -160,6 +164,18 @@ fun HomeScreen(viewModel: MainViewModel) {
                                 onCheckedChange = { viewModel.alterarMostrarEstatisticas(it) }
                             )
                         }
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            mostrarGerenciadorEscalaMusicos = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("🎸 Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedTextField(
@@ -231,6 +247,207 @@ fun HomeScreen(viewModel: MainViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { mostrarPainelAdmin = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
+    }
+
+    // Diálogo Gerenciar Escala de Músicos (Exclusivo Administrador)
+    if (mostrarGerenciadorEscalaMusicos) {
+        var escalaSelecionada by remember { mutableStateOf<EscalaCulto?>(escalas.firstOrNull()) }
+        var tecladistaEdicao by remember(escalaSelecionada) { mutableStateOf(escalaSelecionada?.tecladista ?: "") }
+        var violonistaEdicao by remember(escalaSelecionada) { mutableStateOf(escalaSelecionada?.violonista ?: "") }
+        var bateristaEdicao by remember(escalaSelecionada) { mutableStateOf(escalaSelecionada?.baterista ?: "") }
+
+        val opcoesTeclado = listOf("Selecione...", "Lucas", "Mateus", "Gabriel", "Samuel", "Daniel", "Emanuel", "Outro...")
+        val opcoesViolao = listOf("Selecione...", "Fernando", "Daniel", "Rafael", "Felipe", "Rodrigo", "Gustavo", "Outro...")
+        val opcoesBateria = listOf("Selecione...", "João", "David", "Guilherme", "Pedro", "Marcos", "Lucas", "Outro...")
+
+        AlertDialog(
+            onDismissRequest = { mostrarGerenciadorEscalaMusicos = false },
+            title = { Text("Escala de Músicos (Administrador)") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Selecione o culto/data para cadastrar a equipe instrumental:", fontSize = 13.sp)
+
+                    if (escalas.isEmpty()) {
+                        Text("Nenhum culto agendado cadastrado.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        escalas.forEach { e ->
+                            val ehSelecionado = escalaSelecionada?.id == e.id
+                            Surface(
+                                onClick = {
+                                    escalaSelecionada = e
+                                    tecladistaEdicao = e.tecladista
+                                    violonistaEdicao = e.violonista
+                                    bateristaEdicao = e.baterista
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (ehSelecionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "${e.diaSemana} — ${e.dataCulto}",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = if (ehSelecionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Ministro: ${e.nomeMinistro}",
+                                            fontSize = 12.sp,
+                                            color = if (ehSelecionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (ehSelecionado) {
+                                        Text("✓ Selecionado", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
+
+                        if (escalaSelecionada != null) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            SeletorMusicoSpinner(
+                                label = "Teclado",
+                                icone = "🎹",
+                                musicoSelecionado = tecladistaEdicao,
+                                opcoesMusicos = opcoesTeclado,
+                                onMusicoSelecionado = { tecladistaEdicao = it }
+                            )
+
+                            SeletorMusicoSpinner(
+                                label = "Violão",
+                                icone = "🎸",
+                                musicoSelecionado = violonistaEdicao,
+                                opcoesMusicos = opcoesViolao,
+                                onMusicoSelecionado = { violonistaEdicao = it }
+                            )
+
+                            SeletorMusicoSpinner(
+                                label = "Bateria",
+                                icone = "🥁",
+                                musicoSelecionado = bateristaEdicao,
+                                opcoesMusicos = opcoesBateria,
+                                onMusicoSelecionado = { bateristaEdicao = it }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val esc = escalaSelecionada
+                        if (esc != null) {
+                            val escAtualizada = esc.copy(
+                                tecladista = tecladistaEdicao.trim(),
+                                violonista = violonistaEdicao.trim(),
+                                baterista = bateristaEdicao.trim()
+                            )
+                            viewModel.salvarEscalaCulto(escAtualizada) {}
+                        }
+                        mostrarGerenciadorEscalaMusicos = false
+                    },
+                    enabled = escalaSelecionada != null
+                ) {
+                    Text("Salvar Escala")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarGerenciadorEscalaMusicos = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo Detalhes da Equipe
+    if (escalaParaDetalhes != null) {
+        val esc = escalaParaDetalhes!!
+        AlertDialog(
+            onDismissRequest = { escalaParaDetalhes = null },
+            title = { Text("Detalhes da Equipe") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Culto: ${esc.diaSemana} (${esc.dataCulto})",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "👑 Dirigente / Ministro: ${esc.nomeMinistro.ifBlank { "Não informado" }}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                    Text(
+                        text = "Escala de Instrumentistas:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🎹 Teclado:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            text = esc.tecladista.ifBlank { "Não escalado" },
+                            fontSize = 14.sp,
+                            fontWeight = if (esc.tecladista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (esc.tecladista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🎸 Violão:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            text = esc.violonista.ifBlank { "Não escalado" },
+                            fontSize = 14.sp,
+                            fontWeight = if (esc.violonista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (esc.violonista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🥁 Bateria:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            text = esc.baterista.ifBlank { "Não escalado" },
+                            fontSize = 14.sp,
+                            fontWeight = if (esc.baterista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (esc.baterista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { escalaParaDetalhes = null }) {
                     Text("Fechar")
                 }
             }
@@ -490,7 +707,7 @@ fun HomeScreen(viewModel: MainViewModel) {
             val hojeStr = formatoData.format(Date())
             val hojeDate = formatoData.parse(hojeStr) ?: Date()
 
-            val escalasAtivas = escalas.filter {	it.dataCulto >= hojeStr }
+            val escalasAtivas = escalas.filter { it.dataCulto >= hojeStr }
 
             if (escalasAtivas.isEmpty()) {
                 Card(
@@ -575,13 +792,26 @@ fun HomeScreen(viewModel: MainViewModel) {
                                 }
                             }
 
-                            if (podeEditar) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                TextButton(
-                                    onClick = { viewModel.abrirEdicaoCulto(escala) },
-                                    modifier = Modifier.align(Alignment.End)
-                                ) {
-                                    Text("Editar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(onClick = { escalaParaDetalhes = escala }) {
+                                    Text(
+                                        text = "ℹ️ detalhes da equipe",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 13.sp
+                                    )
+                                }
+
+                                if (podeEditar) {
+                                    TextButton(onClick = { viewModel.abrirEdicaoCulto(escala) }) {
+                                        Text("Editar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
                                 }
                             }
                         }

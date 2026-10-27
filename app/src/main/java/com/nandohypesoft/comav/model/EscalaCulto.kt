@@ -13,5 +13,8 @@ data class EscalaCulto(
     val dataCulto: String = "", // formato "yyyy-MM-dd" para ordenação e filtro
     val diaSemana: String = "", // ex: Domingo, Quarta-feira
     val itens: List<ItemEscala> = emptyList(),
+    val tecladista: String = "",
+    val violonista: String = "",
+    val baterista: String = "",
     val criadaEm: Long = System.currentTimeMillis()
 )

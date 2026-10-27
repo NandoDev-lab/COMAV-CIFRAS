@@ -16,6 +16,9 @@ data class EscalaCultoEntity(
     val dataCulto: String,
     val diaSemana: String,
     val itensJson: String,
+    val tecladista: String = "",
+    val violonista: String = "",
+    val baterista: String = "",
     val criadaEm: Long
 ) {
     fun toEscalaCulto(gson: Gson = Gson()): EscalaCulto {
@@ -27,6 +30,9 @@ data class EscalaCultoEntity(
             dataCulto = dataCulto,
             diaSemana = diaSemana,
             itens = itensList,
+            tecladista = tecladista,
+            violonista = violonista,
+            baterista = baterista,
             criadaEm = criadaEm
         )
     }
@@ -39,6 +45,9 @@ data class EscalaCultoEntity(
                 dataCulto = escala.dataCulto,
                 diaSemana = escala.diaSemana,
                 itensJson = gson.toJson(escala.itens),
+                tecladista = escala.tecladista,
+                violonista = escala.violonista,
+                baterista = escala.baterista,
                 criadaEm = escala.criadaEm
             )
         }

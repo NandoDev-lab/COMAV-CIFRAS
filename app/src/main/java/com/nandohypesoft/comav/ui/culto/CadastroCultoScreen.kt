@@ -33,6 +33,82 @@ class ItemEscalaFormState(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun SeletorMusicoSpinner(
+    label: String,
+    icone: String,
+    musicoSelecionado: String,
+    opcoesMusicos: List<String>,
+    onMusicoSelecionado: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var mostrandoOutroCampo by remember { mutableStateOf(false) }
+    var valorPersonalizado by remember { mutableStateOf("") }
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = "$icone $label",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = if (musicoSelecionado.isBlank()) "Selecione o músico..." else musicoSelecionado,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                opcoesMusicos.forEach { nome ->
+                    DropdownMenuItem(
+                        text = { Text(nome, fontSize = 14.sp) },
+                        onClick = {
+                            if (nome == "Outro...") {
+                                mostrandoOutroCampo = true
+                            } else {
+                                mostrandoOutroCampo = false
+                                onMusicoSelecionado(if (nome.startsWith("Selecione") || nome.startsWith("Nenhum")) "" else nome)
+                            }
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        if (mostrandoOutroCampo) {
+            OutlinedTextField(
+                value = valorPersonalizado,
+                onValueChange = {
+                    valorPersonalizado = it
+                    onMusicoSelecionado(it)
+                },
+                placeholder = { Text("Digite o nome do músico...") },
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     val musicas by viewModel.todasMusicas.collectAsState()
     val escalaEmEdicao by viewModel.escalaEmEdicao.collectAsState()
@@ -57,6 +133,14 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
     var dataCultoBr by remember { mutableStateOf(initialDateStr) }
     var diaSemana by remember { mutableStateOf(escalaEmEdicao?.diaSemana?.takeIf { it.isNotBlank() } ?: "Domingo") }
+
+    var tecladista by remember { mutableStateOf(escalaEmEdicao?.tecladista ?: "") }
+    var violonista by remember { mutableStateOf(escalaEmEdicao?.violonista ?: "") }
+    var baterista by remember { mutableStateOf(escalaEmEdicao?.baterista ?: "") }
+
+    val opcoesTeclado = listOf("Selecione...", "Lucas", "Mateus", "Gabriel", "Samuel", "Daniel", "Emanuel", "Outro...")
+    val opcoesViolao = listOf("Selecione...", "Fernando", "Daniel", "Rafael", "Felipe", "Rodrigo", "Gustavo", "Outro...")
+    val opcoesBateria = listOf("Selecione...", "João", "David", "Guilherme", "Pedro", "Marcos", "Lucas", "Outro...")
 
     val equipeCantores = listOf("Pastora Val", "Maisa", "Isabele", "Daniel", "Fernando", "Nanda", "Fabiana")
 
@@ -85,7 +169,7 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     var dialogCantorIndex by remember { mutableStateOf<Int?>(null) }
     var pesquisaMusicaDialog by remember { mutableStateOf("") }
 
-    // Diálogo de Seleção de Música com Badge Azul (primaryContainer)
+    // Diálogo de Seleção de Música
     dialogMusicaIndex?.let { index ->
         val itemAtual = itensForm[index]
         val musicasFiltradas = if (pesquisaMusicaDialog.isBlank()) {
@@ -275,7 +359,40 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Divider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            Text(
+                text = "Escala de Músicos (Instrumentos)",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            SeletorMusicoSpinner(
+                label = "Teclado",
+                icone = "🎹",
+                musicoSelecionado = tecladista,
+                opcoesMusicos = opcoesTeclado,
+                onMusicoSelecionado = { tecladista = it }
+            )
+
+            SeletorMusicoSpinner(
+                label = "Violão",
+                icone = "🎸",
+                musicoSelecionado = violonista,
+                opcoesMusicos = opcoesViolao,
+                onMusicoSelecionado = { violonista = it }
+            )
+
+            SeletorMusicoSpinner(
+                label = "Bateria",
+                icone = "🥁",
+                musicoSelecionado = baterista,
+                opcoesMusicos = opcoesBateria,
+                onMusicoSelecionado = { baterista = it }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             Text(
                 text = "Repertório do Culto",
@@ -298,7 +415,6 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         
-                        // Botão Seletor de Música com Badge Azul no card
                         OutlinedCard(
                             onClick = { dialogMusicaIndex = index },
                             shape = RoundedCornerShape(8.dp),
@@ -333,7 +449,6 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                             }
                         }
 
-                        // Botão Seletor de Cantor (Equipe)
                         OutlinedCard(
                             onClick = { dialogCantorIndex = index },
                             shape = RoundedCornerShape(8.dp),
@@ -362,7 +477,6 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 }
             }
 
-            // Botão Adicionar Música Extra
             OutlinedButton(
                 onClick = {
                     itensForm.add(ItemEscalaFormState(ehExtra = true))
@@ -396,7 +510,10 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                         nomeMinistro = nomeMinistro.trim(),
                         dataCulto = dataStorage,
                         diaSemana = diaSemana.trim(),
-                        itens = itens
+                        itens = itens,
+                        tecladista = tecladista.trim(),
+                        violonista = violonista.trim(),
+                        baterista = baterista.trim()
                     )
 
                     viewModel.salvarEscalaCulto(novaEscala) {
