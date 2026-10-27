@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,7 +20,7 @@ import java.util.Locale
 
 object NotificacaoManager {
 
-    private const val CHANNEL_ID = "comav_notificacoes_channel"
+    private const val CHANNEL_ID = "comav_notificacoes_channel_v2"
     private const val CHANNEL_NAME = "Alertas do COMAV Cifras"
 
     fun criarCanalNotificacao(context: Context) {
@@ -27,6 +28,8 @@ object NotificacaoManager {
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = "Notificações para agendamento e alertas da equipe de louvor"
+                enableVibration(true)
+                enableLights(true)
             }
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
@@ -42,14 +45,32 @@ object NotificacaoManager {
                 .setContentTitle(titulo)
                 .setContentText(mensagem)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(mensagem))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setAutoCancel(true)
 
             val notificationManager = NotificationManagerCompat.from(context)
-            if (notificationManager.areNotificationsEnabled()) {
+            if (!notificationManager.areNotificationsEnabled()) {
+                Toast.makeText(
+                    context,
+                    "⚠️ As notificações do aplicativo estão desativadas no Android! Ative nas configurações do celular.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
                 notificationManager.notify(notificationId, builder.build())
             }
-        } catch (_: Exception) {}
+
+            // Exibir Toast na tela como feedback imediato
+            Toast.makeText(
+                context,
+                "🔔 $titulo\n$mensagem",
+                Toast.LENGTH_LONG
+            ).show()
+
+        } catch (e: Exception) {
+            Toast.makeText(context, "Erro na notificação: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun registrarPerfilDispositivoFirebase(context: Context, funcao: TipoFuncaoEquipe) {

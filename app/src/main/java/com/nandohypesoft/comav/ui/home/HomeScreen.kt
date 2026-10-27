@@ -1,7 +1,9 @@
 package com.nandohypesoft.comav.ui.home
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -82,6 +84,16 @@ fun HomeScreen(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.importarBackup(context, it) }
+    }
+
+    val launcherPermissaoNotificacao = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(mostrarDialogSimulacaoNotificacoes) {
+        if (mostrarDialogSimulacaoNotificacoes && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            launcherPermissaoNotificacao.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     LaunchedEffect(tipoFuncaoEquipe) {
@@ -704,6 +716,21 @@ fun HomeScreen(viewModel: MainViewModel) {
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("3. Executar Regra de Checagem do Mês", fontSize = 13.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {}
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("⚙️ Configurações de Notificação do Android", fontSize = 12.sp)
                     }
                 }
             },
