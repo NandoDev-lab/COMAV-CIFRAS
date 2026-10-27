@@ -399,7 +399,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "👑 Dirigente / Ministro: ${esc.nomeMinistro.ifBlank { "Não informado" }}",
+                        text = "🎼 Dirigente / Ministro: ${esc.nomeMinistro.ifBlank { "Não informado" }}",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
