@@ -201,9 +201,14 @@ class MainViewModel(
     fun salvarEscalaMusicoData(escalaMusico: EscalaMusicoData, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             try {
+                // Atualiza em memória imediatamente
+                val mapaAtual = _escalasMusicosDatas.value.toMutableMap()
+                mapaAtual[escalaMusico.dataIso] = escalaMusico
+                _escalasMusicosDatas.value = mapaAtual
+
                 cultoRepository.salvarEscalaMusicoData(escalaMusico)
                 carregarEscalasMusicosData()
-                _mensagemAlerta.value = "Escala de músicos salva para ${escalaMusico.dataIso}!"
+                _mensagemAlerta.value = "Escala de músicos salva com sucesso!"
                 onSuccess()
             } catch (e: Exception) {
                 _mensagemAlerta.value = "Erro ao salvar escala de músicos: ${e.localizedMessage}"

@@ -41,7 +41,12 @@ class MainActivity : ComponentActivity() {
         val userPreferencesRepository = UserPreferencesRepository(applicationContext)
 
         val viewModel: MainViewModel by viewModels {
-            MainViewModelFactory(repository, userPreferencesRepository, database.escalaCultoDao())
+            MainViewModelFactory(
+                repository,
+                userPreferencesRepository,
+                database.escalaCultoDao(),
+                database.escalaMusicoDataDao()
+            )
         }
 
         setContent {
