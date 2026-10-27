@@ -174,6 +174,9 @@ fun CalendarioEscalaMusicosDialog(
 
                                     val ehSelecionado = diaSelecionado == diaNumero
 
+                                    val verdeEscala = Color(0xFF2E7D32)
+                                    val verdeSelecionado = Color(0xFF1B5E20)
+
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
@@ -182,8 +185,9 @@ fun CalendarioEscalaMusicosDialog(
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(
                                                 when {
+                                                    temMusicoCadastrado && ehSelecionado -> verdeSelecionado
+                                                    temMusicoCadastrado -> verdeEscala
                                                     ehSelecionado -> MaterialTheme.colorScheme.primary
-                                                    temMusicoCadastrado -> MaterialTheme.colorScheme.tertiaryContainer
                                                     ehQuintaOuDomingo -> MaterialTheme.colorScheme.primaryContainer
                                                     else -> MaterialTheme.colorScheme.surfaceVariant
                                                 }
@@ -197,10 +201,10 @@ fun CalendarioEscalaMusicosDialog(
                                             Text(
                                                 text = diaNumero.toString(),
                                                 fontSize = 12.sp,
-                                                fontWeight = if (ehQuintaOuDomingo) FontWeight.Bold else FontWeight.Normal,
+                                                fontWeight = if (ehQuintaOuDomingo || temMusicoCadastrado) FontWeight.Bold else FontWeight.Normal,
                                                 color = when {
+                                                    temMusicoCadastrado -> Color.White
                                                     ehSelecionado -> MaterialTheme.colorScheme.onPrimary
-                                                    temMusicoCadastrado -> MaterialTheme.colorScheme.onTertiaryContainer
                                                     ehQuintaOuDomingo -> MaterialTheme.colorScheme.onPrimaryContainer
                                                     else -> MaterialTheme.colorScheme.onSurface
                                                 }
@@ -228,8 +232,8 @@ fun CalendarioEscalaMusicosDialog(
                         Text("Culto (Qui/Dom)", fontSize = 10.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiaryContainer))
-                        Text("Músicos Escala", fontSize = 10.sp)
+                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color(0xFF2E7D32)))
+                        Text("Escala Salva (Verde)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                     }
                 }
 
