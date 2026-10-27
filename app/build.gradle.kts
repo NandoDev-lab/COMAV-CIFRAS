@@ -67,6 +67,9 @@ dependencies {
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // WorkManager para tarefas em segundo plano
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
     implementation("com.google.firebase:firebase-firestore")

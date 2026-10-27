@@ -28,8 +28,10 @@ import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.nandohypesoft.comav.model.EscalaCulto
+import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import com.nandohypesoft.comav.ui.MainViewModel
 import com.nandohypesoft.comav.ui.TelaDestino
+import com.nandohypesoft.comav.ui.components.DialogPerfilUsuario
 import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
 import java.text.SimpleDateFormat
@@ -46,9 +48,11 @@ fun HomeScreen(viewModel: MainViewModel) {
     val mostrarEstatisticas by viewModel.mostrarEstatisticas.collectAsState()
     val consulta by viewModel.consulta.collectAsState()
     val urlGistRemota by viewModel.urlGistRemota.collectAsState()
+    val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
 
     var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
+    var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarPainelAdmin by remember { mutableStateOf(false) }
     var mostrarDialogoSenhaAdmin by remember { mutableStateOf(false) }
     var senhaAdminDigitada by remember { mutableStateOf("") }
@@ -75,6 +79,25 @@ fun HomeScreen(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.importarBackup(context, it) }
+    }
+
+    LaunchedEffect(tipoFuncaoEquipe) {
+        if (tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO) {
+            mostrarDialogPerfil = true
+        } else {
+            viewModel.iniciarAgendadorWorkManager(context)
+        }
+    }
+
+    if (mostrarDialogPerfil || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO) {
+        DialogPerfilUsuario(
+            funcaoAtual = tipoFuncaoEquipe,
+            onConfirmarFuncao = { novaFuncao ->
+                viewModel.salvarTipoFuncaoEquipe(context, novaFuncao)
+                mostrarDialogPerfil = false
+            },
+            onDismiss = { mostrarDialogPerfil = false }
+        )
     }
 
     // Diálogo de Senha Admin
@@ -145,6 +168,31 @@ fun HomeScreen(viewModel: MainViewModel) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val mostrarEst by viewModel.mostrarEstatisticas.collectAsState()
+
+                    Surface(
+                        onClick = { mostrarDialogPerfil = true },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("👤 Sua Função no Grupo de Louvor:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Text(
+                                    text = tipoFuncaoEquipe.titulo,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            Text("Alterar", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
                     Surface(
                         onClick = { viewModel.alterarMostrarEstatisticas(!mostrarEst) },
                         shape = RoundedCornerShape(10.dp),
@@ -359,7 +407,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                                 violonista = violonistaEdicao.trim(),
                                 baterista = bateristaEdicao.trim()
                             )
-                            viewModel.salvarEscalaCulto(escAtualizada) {}
+                            viewModel.salvarEscalaCulto(escala = escAtualizada, context = context, onSuccess = {})
                         }
                         mostrarGerenciadorEscalaMusicos = false
                     },

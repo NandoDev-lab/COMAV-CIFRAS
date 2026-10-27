@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -20,6 +21,16 @@ class UserPreferencesRepository(private val context: Context) {
         private val ESCALA_FONTE = floatPreferencesKey("escala_fonte")
         private val URL_GIST_REMOTA = stringPreferencesKey("url_gist_remota")
         private val MOSTRAR_ESTATISTICAS = booleanPreferencesKey("mostrar_estatisticas")
+        private val TIPO_FUNCAO_EQUIPE = stringPreferencesKey("tipo_funcao_equipe")
+    }
+
+    val tipoFuncaoEquipe: Flow<TipoFuncaoEquipe> = context.dataStore.data.map { preferences ->
+        val nome = preferences[TIPO_FUNCAO_EQUIPE] ?: TipoFuncaoEquipe.NAO_DEFINIDO.name
+        try {
+            TipoFuncaoEquipe.valueOf(nome)
+        } catch (_: Exception) {
+            TipoFuncaoEquipe.NAO_DEFINIDO
+        }
     }
 
     val temaEscuro: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -59,6 +70,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun salvarMostrarEstatisticas(ativo: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[MOSTRAR_ESTATISTICAS] = ativo
+        }
+    }
+
+    suspend fun salvarTipoFuncaoEquipe(tipo: TipoFuncaoEquipe) {
+        context.dataStore.edit { preferences ->
+            preferences[TIPO_FUNCAO_EQUIPE] = tipo.name
         }
     }
 }

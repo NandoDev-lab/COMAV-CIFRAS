@@ -12,6 +12,9 @@ import com.nandohypesoft.comav.data.importation.DocumentExtractor
 import com.nandohypesoft.comav.data.preferences.UserPreferencesRepository
 import com.nandohypesoft.comav.data.repository.CultoRepository
 import com.nandohypesoft.comav.data.repository.MusicaRepository
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.nandohypesoft.comav.model.EscalaCulto
 import com.nandohypesoft.comav.model.EscalaMusicoData
 import com.nandohypesoft.comav.model.EstatisticaMusica
@@ -20,6 +23,10 @@ import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.MusicaNova
 import com.nandohypesoft.comav.model.TipoDeConteudo
 import com.nandohypesoft.comav.model.TipoDeOrigem
+import com.nandohypesoft.comav.model.TipoFuncaoEquipe
+import com.nandohypesoft.comav.util.NotificacaoManager
+import com.nandohypesoft.comav.util.NotificacaoWorker
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -124,6 +131,34 @@ class MainViewModel(
 
     val mostrarEstatisticas: StateFlow<Boolean> = userPreferencesRepository.mostrarEstatisticas
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
+
+    fun salvarTipoFuncaoEquipe(context: Context, tipo: TipoFuncaoEquipe) {
+        viewModelScope.launch {
+            userPreferencesRepository.salvarTipoFuncaoEquipe(tipo)
+            NotificacaoManager.registrarPerfilDispositivoFirebase(context, tipo)
+            iniciarAgendadorWorkManager(context)
+            NotificacaoManager.verificarEAgendarAlertas(
+                context = context,
+                funcaoUsuario = tipo,
+                escalasCulto = _escalas.value,
+                escalasMusicosMap = _escalasMusicosDatas.value
+            )
+        }
+    }
+
+    fun iniciarAgendadorWorkManager(context: Context) {
+        try {
+            val workRequest = PeriodicWorkRequestBuilder<NotificacaoWorker>(6, TimeUnit.HOURS).build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "comav_notificacao_worker",
+                ExistingPeriodicWorkPolicy.KEEP,
+                workRequest
+            )
+        } catch (_: Exception) {}
+    }
 
     fun alterarMostrarEstatisticas(ativo: Boolean) {
         viewModelScope.launch {
@@ -257,7 +292,7 @@ class MainViewModel(
         _telaAtual.value = TelaDestino.CADASTRO_CULTO
     }
 
-    fun salvarEscalaCulto(escala: EscalaCulto, onSuccess: () -> Unit) {
+    fun salvarEscalaCulto(escala: EscalaCulto, context: Context? = null, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val escalaFinal = if (_escalaEmEdicao.value != null) {
@@ -269,6 +304,16 @@ class MainViewModel(
                 carregarEscalasCulto()
                 _escalaEmEdicao.value = null
                 _mensagemAlerta.value = "Louvores do culto salvos com sucesso!"
+
+                if (context != null) {
+                    NotificacaoManager.notificarAvisoMusicosNovoCulto(
+                        context = context,
+                        funcaoUsuario = tipoFuncaoEquipe.value,
+                        nomeMinistro = escalaFinal.nomeMinistro,
+                        dataBr = escalaFinal.dataCulto
+                    )
+                }
+
                 onSuccess()
             } catch (e: Exception) {
                 _mensagemAlerta.value = "Erro ao salvar no Firebase: ${e.localizedMessage}"
