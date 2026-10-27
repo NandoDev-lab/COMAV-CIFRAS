@@ -7,11 +7,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.nandohypesoft.comav.data.database.EscalaCultoDao
+import com.nandohypesoft.comav.data.database.EscalaMusicoDataDao
 import com.nandohypesoft.comav.data.importation.DocumentExtractor
 import com.nandohypesoft.comav.data.preferences.UserPreferencesRepository
 import com.nandohypesoft.comav.data.repository.CultoRepository
 import com.nandohypesoft.comav.data.repository.MusicaRepository
 import com.nandohypesoft.comav.model.EscalaCulto
+import com.nandohypesoft.comav.model.EscalaMusicoData
 import com.nandohypesoft.comav.model.EstatisticaMusica
 import com.nandohypesoft.comav.model.ModoDeBusca
 import com.nandohypesoft.comav.model.Musica
@@ -66,10 +68,11 @@ fun criarRascunho(musica: Musica? = null): MusicaNova {
 class MainViewModel(
     private val repository: MusicaRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val escalaCultoDao: EscalaCultoDao? = null
+    private val escalaCultoDao: EscalaCultoDao? = null,
+    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null
 ) : ViewModel() {
 
-    private val cultoRepository = CultoRepository(escalaCultoDao)
+    private val cultoRepository = CultoRepository(escalaCultoDao, escalaMusicoDataDao)
 
     private val _telaAtual = MutableStateFlow(TelaDestino.HOME)
     val telaAtual: StateFlow<TelaDestino> = _telaAtual.asStateFlow()
@@ -79,6 +82,9 @@ class MainViewModel(
 
     private val _escalaEmEdicao = MutableStateFlow<EscalaCulto?>(null)
     val escalaEmEdicao: StateFlow<EscalaCulto?> = _escalaEmEdicao.asStateFlow()
+
+    private val _escalasMusicosDatas = MutableStateFlow<Map<String, EscalaMusicoData>>(emptyMap())
+    val escalasMusicosDatas: StateFlow<Map<String, EscalaMusicoData>> = _escalasMusicosDatas.asStateFlow()
 
     private val _musicas = MutableStateFlow<List<Musica>>(emptyList())
     val musicas: StateFlow<List<Musica>> = _musicas.asStateFlow()
@@ -179,7 +185,34 @@ class MainViewModel(
         recarregar()
         sincronizarGistSilencioso()
         carregarEscalasCulto()
+        carregarEscalasMusicosData()
         carregarTodasMusicas()
+    }
+
+    fun carregarEscalasMusicosData() {
+        viewModelScope.launch {
+            try {
+                val lista = cultoRepository.listarTodasEscalasMusicosData()
+                _escalasMusicosDatas.value = lista.associateBy { it.dataIso }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun salvarEscalaMusicoData(escalaMusico: EscalaMusicoData, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                cultoRepository.salvarEscalaMusicoData(escalaMusico)
+                carregarEscalasMusicosData()
+                _mensagemAlerta.value = "Escala de músicos salva para ${escalaMusico.dataIso}!"
+                onSuccess()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao salvar escala de músicos: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun obterEscalaMusicoPorDataSync(dataIso: String): EscalaMusicoData? {
+        return _escalasMusicosDatas.value[dataIso]
     }
 
     fun carregarTodasMusicas() {
@@ -441,10 +474,11 @@ class MainViewModel(
 class MainViewModelFactory(
     private val repository: MusicaRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val escalaCultoDao: EscalaCultoDao? = null
+    private val escalaCultoDao: EscalaCultoDao? = null,
+    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return MainViewModel(repository, userPreferencesRepository, escalaCultoDao) as T
+        return MainViewModel(repository, userPreferencesRepository, escalaCultoDao, escalaMusicoDataDao) as T
     }
 }

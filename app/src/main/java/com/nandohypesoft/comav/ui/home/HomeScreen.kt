@@ -30,6 +30,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.nandohypesoft.comav.model.EscalaCulto
 import com.nandohypesoft.comav.ui.MainViewModel
 import com.nandohypesoft.comav.ui.TelaDestino
+import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,6 +56,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
+    var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
     var escalaParaDetalhes by remember { mutableStateOf<EscalaCulto?>(null) }
 
     val launcherImportarDoc = rememberLauncherForActivityResult(
@@ -169,13 +171,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                     Button(
                         onClick = {
                             mostrarPainelAdmin = false
-                            mostrarGerenciadorEscalaMusicos = true
+                            mostrarCalendarioMusicos = true
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text("🎸 Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                        Text("📅 Calendário Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedTextField(
@@ -377,6 +379,11 @@ fun HomeScreen(viewModel: MainViewModel) {
     // Diálogo Detalhes da Equipe
     if (escalaParaDetalhes != null) {
         val esc = escalaParaDetalhes!!
+        val musicoData = viewModel.obterEscalaMusicoPorDataSync(esc.dataCulto)
+        val tecladistaFinal = esc.tecladista.ifBlank { musicoData?.tecladista ?: "" }
+        val violonistaFinal = esc.violonista.ifBlank { musicoData?.violonista ?: "" }
+        val bateristaFinal = esc.baterista.ifBlank { musicoData?.baterista ?: "" }
+
         AlertDialog(
             onDismissRequest = { escalaParaDetalhes = null },
             title = { Text("Detalhes da Equipe") },
@@ -412,10 +419,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                     ) {
                         Text("🎹 Teclado:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Text(
-                            text = esc.tecladista.ifBlank { "Não escalado" },
+                            text = tecladistaFinal.ifBlank { "Não escalado" },
                             fontSize = 14.sp,
-                            fontWeight = if (esc.tecladista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
-                            color = if (esc.tecladista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = if (tecladistaFinal.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (tecladistaFinal.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -425,10 +432,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                     ) {
                         Text("🎸 Violão:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Text(
-                            text = esc.violonista.ifBlank { "Não escalado" },
+                            text = violonistaFinal.ifBlank { "Não escalado" },
                             fontSize = 14.sp,
-                            fontWeight = if (esc.violonista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
-                            color = if (esc.violonista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = if (violonistaFinal.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (violonistaFinal.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -438,10 +445,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                     ) {
                         Text("🥁 Bateria:", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Text(
-                            text = esc.baterista.ifBlank { "Não escalado" },
+                            text = bateristaFinal.ifBlank { "Não escalado" },
                             fontSize = 14.sp,
-                            fontWeight = if (esc.baterista.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
-                            color = if (esc.baterista.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = if (bateristaFinal.isNotBlank()) FontWeight.Bold else FontWeight.Normal,
+                            color = if (bateristaFinal.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -562,6 +569,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                     Text("Fechar")
                 }
             }
+        )
+    }
+
+    if (mostrarCalendarioMusicos) {
+        CalendarioEscalaMusicosDialog(
+            viewModel = viewModel,
+            onDismiss = { mostrarCalendarioMusicos = false }
         )
     }
 

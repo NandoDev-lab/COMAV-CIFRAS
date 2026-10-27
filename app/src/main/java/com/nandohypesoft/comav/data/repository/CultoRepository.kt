@@ -3,7 +3,10 @@ package com.nandohypesoft.comav.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.nandohypesoft.comav.data.database.EscalaCultoDao
 import com.nandohypesoft.comav.data.database.EscalaCultoEntity
+import com.nandohypesoft.comav.data.database.EscalaMusicoDataDao
+import com.nandohypesoft.comav.data.database.EscalaMusicoDataEntity
 import com.nandohypesoft.comav.model.EscalaCulto
+import com.nandohypesoft.comav.model.EscalaMusicoData
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -11,7 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-class CultoRepository(private val escalaCultoDao: EscalaCultoDao? = null) {
+class CultoRepository(
+    private val escalaCultoDao: EscalaCultoDao? = null,
+    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null
+) {
     private val firestore: FirebaseFirestore? by lazy {
         try {
             FirebaseFirestore.getInstance()
@@ -64,5 +70,55 @@ class CultoRepository(private val escalaCultoDao: EscalaCultoDao? = null) {
                 firestore?.collection("escala_cultos")?.document(id)?.delete()?.await()
             } catch (_: Exception) {}
         }
+    }
+
+    // --- MÚSICOS POR DATA (CALENDÁRIO) ---
+
+    suspend fun salvarEscalaMusicoData(escalaMusico: EscalaMusicoData) = withContext(Dispatchers.IO) {
+        if (escalaMusico.dataIso.isBlank()) return@withContext
+        escalaMusicoDataDao?.salvar(EscalaMusicoDataEntity.fromEscalaMusicoData(escalaMusico))
+        try {
+            firestore?.collection("escala_musicos_datas")
+                ?.document(escalaMusico.dataIso)
+                ?.set(escalaMusico)
+                ?.await()
+        } catch (_: Exception) {}
+    }
+
+    suspend fun obterEscalaMusicoPorData(dataIso: String): EscalaMusicoData? = withContext(Dispatchers.IO) {
+        if (dataIso.isBlank()) return@withContext null
+        
+        // 1. Tentar Room
+        val local = escalaMusicoDataDao?.obterPorData(dataIso)?.toEscalaMusicoData()
+        if (local != null) return@withContext local
+
+        // 2. Tentar Firebase
+        try {
+            val doc = firestore?.collection("escala_musicos_datas")?.document(dataIso)?.get()?.await()
+            if (doc != null && doc.exists()) {
+                val remote = doc.toObject(EscalaMusicoData::class.java)
+                if (remote != null) {
+                    escalaMusicoDataDao?.salvar(EscalaMusicoDataEntity.fromEscalaMusicoData(remote))
+                    return@withContext remote
+                }
+            }
+        } catch (_: Exception) {}
+
+        null
+    }
+
+    suspend fun listarTodasEscalasMusicosData(): List<EscalaMusicoData> = withContext(Dispatchers.IO) {
+        try {
+            val snapshot = firestore?.collection("escala_musicos_datas")?.get()?.await()
+            if (snapshot != null) {
+                val remoteList = snapshot.toObjects(EscalaMusicoData::class.java)
+                remoteList.forEach { item ->
+                    escalaMusicoDataDao?.salvar(EscalaMusicoDataEntity.fromEscalaMusicoData(item))
+                }
+            }
+        } catch (_: Exception) {}
+
+        val locais = escalaMusicoDataDao?.obterTodas() ?: emptyList()
+        locais.map { it.toEscalaMusicoData() }
     }
 }

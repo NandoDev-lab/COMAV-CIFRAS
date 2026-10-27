@@ -138,6 +138,33 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     var violonista by remember { mutableStateOf(escalaEmEdicao?.violonista ?: "") }
     var baterista by remember { mutableStateOf(escalaEmEdicao?.baterista ?: "") }
 
+    val dataStorageAtual = remember(dataCultoBr) {
+        try {
+            val parsedDate = displayDateFormat.parse(dataCultoBr.trim())
+            if (parsedDate != null) storageDateFormat.format(parsedDate) else dataCultoBr.trim()
+        } catch (_: Exception) {
+            dataCultoBr.trim()
+        }
+    }
+
+    val escalaMusicoDataAutobuscada = remember(dataStorageAtual) {
+        viewModel.obterEscalaMusicoPorDataSync(dataStorageAtual)
+    }
+
+    LaunchedEffect(escalaMusicoDataAutobuscada) {
+        escalaMusicoDataAutobuscada?.let { musicoData ->
+            if (tecladista.isBlank() && musicoData.tecladista.isNotBlank()) {
+                tecladista = musicoData.tecladista
+            }
+            if (violonista.isBlank() && musicoData.violonista.isNotBlank()) {
+                violonista = musicoData.violonista
+            }
+            if (baterista.isBlank() && musicoData.baterista.isNotBlank()) {
+                baterista = musicoData.baterista
+            }
+        }
+    }
+
     val opcoesTeclado = listOf("Selecione...", "Lucas", "Mateus", "Gabriel", "Samuel", "Daniel", "Emanuel", "Outro...")
     val opcoesViolao = listOf("Selecione...", "Fernando", "Daniel", "Rafael", "Felipe", "Rodrigo", "Gustavo", "Outro...")
     val opcoesBateria = listOf("Selecione...", "João", "David", "Guilherme", "Pedro", "Marcos", "Lucas", "Outro...")
@@ -506,14 +533,19 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                         .filter { it.musica.isNotBlank() }
                         .map { ItemEscala(tituloMusica = it.musica, cantor = it.cantor, ehExtra = it.ehExtra, identificadorMusica = it.identificador) }
 
+                    val musicoData = viewModel.obterEscalaMusicoPorDataSync(dataStorage)
+                    val tecladistaFinal = tecladista.trim().ifBlank { musicoData?.tecladista ?: "" }
+                    val violonistaFinal = violonista.trim().ifBlank { musicoData?.violonista ?: "" }
+                    val bateristaFinal = baterista.trim().ifBlank { musicoData?.baterista ?: "" }
+
                     val novaEscala = EscalaCulto(
                         nomeMinistro = nomeMinistro.trim(),
                         dataCulto = dataStorage,
                         diaSemana = diaSemana.trim(),
                         itens = itens,
-                        tecladista = tecladista.trim(),
-                        violonista = violonista.trim(),
-                        baterista = baterista.trim()
+                        tecladista = tecladistaFinal,
+                        violonista = violonistaFinal,
+                        baterista = bateristaFinal
                     )
 
                     viewModel.salvarEscalaCulto(novaEscala) {
