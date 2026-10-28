@@ -57,6 +57,14 @@ fun HomeScreen(viewModel: MainViewModel) {
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
     val nomeUsuario by viewModel.nomeUsuario.collectAsState()
 
+    val ehDevExcecao = remember(nomeUsuario) {
+        nomeUsuario.trim().uppercase().contains("FERNANDO")
+    }
+
+    val podeAcessarAdmin = tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao
+    val podeCadastrarCulto = tipoFuncaoEquipe == TipoFuncaoEquipe.MINISTRO_CANTOR || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
+    val podeVerCifras = tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
+
     var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
@@ -724,7 +732,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         IconButton(onClick = { mostrarDialogoCompartilharQr = true }) {
                             Icon(imageVector = Icons.Default.QrCode, contentDescription = "QR", tint = MaterialTheme.colorScheme.primary)
                         }
-                        if (tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER) {
+                        if (podeAcessarAdmin) {
                             IconButton(onClick = { mostrarPainelAdmin = true }) {
                                 Icon(imageVector = Icons.Default.Settings, contentDescription = "Painel Admin", tint = MaterialTheme.colorScheme.primary)
                             }
@@ -794,9 +802,6 @@ fun HomeScreen(viewModel: MainViewModel) {
                     }
                 }
             }
-
-            val podeCadastrarCulto = tipoFuncaoEquipe == TipoFuncaoEquipe.MINISTRO_CANTOR || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
-            val podeVerCifras = tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
 
             // 1. Cadastrar Louvores do Culto
             if (podeCadastrarCulto) {
