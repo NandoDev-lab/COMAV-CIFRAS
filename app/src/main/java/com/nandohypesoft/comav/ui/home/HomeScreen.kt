@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -91,6 +92,12 @@ fun HomeScreen(viewModel: MainViewModel) {
 
     LaunchedEffect(Unit) {
         viewModel.consultarEPersistirPerfilDispositivoFirebase(context)
+    }
+
+    LaunchedEffect(nomeUsuario) {
+        if (nomeUsuario.isNotBlank()) {
+            Toast.makeText(context, SaudacaoUtil.gerarSaudacao(nomeUsuario), Toast.LENGTH_SHORT).show()
+        }
     }
 
     LaunchedEffect(mostrarDialogSimulacaoNotificacoes) {
@@ -756,11 +763,10 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            val saudacao = remember(nomeUsuario) {
-                if (nomeUsuario.isNotBlank()) SaudacaoUtil.gerarSaudacao(nomeUsuario) else ""
-            }
+            if (nomeUsuario.isNotBlank() && tipoFuncaoEquipe != TipoFuncaoEquipe.NAO_DEFINIDO) {
+                val ehMulher = remember(nomeUsuario) { SaudacaoUtil.ehMulher(nomeUsuario) }
+                val textoLogado = if (ehMulher) "Você está logada como" else "Você está logado como"
 
-            if (saudacao.isNotBlank()) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -771,13 +777,20 @@ fun HomeScreen(viewModel: MainViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("✨", fontSize = 20.sp)
-                        Text(
-                            text = saudacao,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Text("👤", fontSize = 20.sp)
+                        Column {
+                            Text(
+                                text = "$textoLogado:",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                            Text(
+                                text = "${tipoFuncaoEquipe.titulo} — $nomeUsuario",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
