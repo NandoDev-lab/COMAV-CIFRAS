@@ -38,6 +38,7 @@ import com.nandohypesoft.comav.ui.components.DialogPerfilUsuario
 import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
 import com.nandohypesoft.comav.util.NotificacaoManager
+import com.nandohypesoft.comav.util.SaudacaoUtil
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +54,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     val consulta by viewModel.consulta.collectAsState()
     val urlGistRemota by viewModel.urlGistRemota.collectAsState()
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
+    val nomeUsuario by viewModel.nomeUsuario.collectAsState()
 
     var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
@@ -111,13 +113,14 @@ fun HomeScreen(viewModel: MainViewModel) {
         }
     }
 
-    if (mostrarDialogPerfil) {
+    if (mostrarDialogPerfil || (tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO && nomeUsuario.isBlank())) {
         DialogPerfilUsuario(
             funcaoAtual = tipoFuncaoEquipe,
-            onConfirmarFuncao = { novaFuncao ->
+            nomeAtual = nomeUsuario,
+            onConfirmar = { novaFuncao, novoNome ->
                 perfilJaDefinido = true
                 mostrarDialogPerfil = false
-                viewModel.salvarTipoFuncaoEquipe(context, novaFuncao)
+                viewModel.salvarPerfilENomeUsuario(context, novaFuncao, novoNome)
             },
             onDismiss = {
                 mostrarDialogPerfil = false
@@ -752,6 +755,32 @@ fun HomeScreen(viewModel: MainViewModel) {
             )
 
             Spacer(modifier = Modifier.height(4.dp))
+
+            val saudacao = remember(nomeUsuario) {
+                if (nomeUsuario.isNotBlank()) SaudacaoUtil.gerarSaudacao(nomeUsuario) else ""
+            }
+
+            if (saudacao.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("✨", fontSize = 20.sp)
+                        Text(
+                            text = saudacao,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
 
             val podeCadastrarCulto = tipoFuncaoEquipe == TipoFuncaoEquipe.MINISTRO_CANTOR || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
             val podeVerCifras = tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO

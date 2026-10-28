@@ -73,7 +73,7 @@ object NotificacaoManager {
         }
     }
 
-    fun registrarPerfilDispositivoFirebase(context: Context, funcao: TipoFuncaoEquipe) {
+    fun registrarPerfilDispositivoFirebase(context: Context, funcao: TipoFuncaoEquipe, nomeUsuario: String = "") {
         try {
             val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "device_unknown"
             val firestore = FirebaseFirestore.getInstance()
@@ -81,6 +81,7 @@ object NotificacaoManager {
             val dadosDispositivo = mapOf(
                 "dispositivoId" to androidId,
                 "funcao" to funcao.name,
+                "nomeUsuario" to nomeUsuario.trim().uppercase(),
                 "modelo" to Build.MODEL,
                 "atualizadoEm" to System.currentTimeMillis()
             )

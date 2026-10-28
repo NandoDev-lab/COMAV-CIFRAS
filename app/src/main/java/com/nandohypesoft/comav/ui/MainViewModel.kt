@@ -137,6 +137,9 @@ class MainViewModel(
     val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
 
+    val nomeUsuario: StateFlow<String> = userPreferencesRepository.nomeUsuario
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     fun consultarEPersistirPerfilDispositivoFirebase(context: Context) {
         viewModelScope.launch {
             try {
@@ -155,15 +158,21 @@ class MainViewModel(
                             userPreferencesRepository.salvarTipoFuncaoEquipe(funcaoRemota)
                         } catch (_: Exception) {}
                     }
+                    val nomeStr = doc.getString("nomeUsuario")
+                    if (!nomeStr.isNullOrBlank()) {
+                        userPreferencesRepository.salvarNomeUsuario(nomeStr)
+                    }
                 }
             } catch (_: Exception) {}
         }
     }
 
-    fun salvarTipoFuncaoEquipe(context: Context, tipo: TipoFuncaoEquipe) {
+    fun salvarPerfilENomeUsuario(context: Context, tipo: TipoFuncaoEquipe, nome: String) {
         viewModelScope.launch {
+            val nomeMaiusculo = nome.trim().uppercase()
             userPreferencesRepository.salvarTipoFuncaoEquipe(tipo)
-            NotificacaoManager.registrarPerfilDispositivoFirebase(context, tipo)
+            userPreferencesRepository.salvarNomeUsuario(nomeMaiusculo)
+            NotificacaoManager.registrarPerfilDispositivoFirebase(context, tipo, nomeMaiusculo)
             iniciarAgendadorWorkManager(context)
             NotificacaoManager.verificarEAgendarAlertas(
                 context = context,

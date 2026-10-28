@@ -114,8 +114,17 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     val appContext = LocalContext.current
     val musicas by viewModel.todasMusicas.collectAsState()
     val escalaEmEdicao by viewModel.escalaEmEdicao.collectAsState()
+    val nomeUsuarioSalvo by viewModel.nomeUsuario.collectAsState()
 
-    var nomeMinistro by remember { mutableStateOf(escalaEmEdicao?.nomeMinistro ?: "") }
+    var nomeMinistro by remember(escalaEmEdicao, nomeUsuarioSalvo) {
+        mutableStateOf(
+            if (escalaEmEdicao != null && escalaEmEdicao!!.nomeMinistro.isNotBlank()) {
+                escalaEmEdicao!!.nomeMinistro
+            } else {
+                nomeUsuarioSalvo
+            }
+        )
+    }
     
     val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val storageDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())

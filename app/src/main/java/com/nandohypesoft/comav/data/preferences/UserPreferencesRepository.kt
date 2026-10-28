@@ -22,6 +22,11 @@ class UserPreferencesRepository(private val context: Context) {
         private val URL_GIST_REMOTA = stringPreferencesKey("url_gist_remota")
         private val MOSTRAR_ESTATISTICAS = booleanPreferencesKey("mostrar_estatisticas")
         private val TIPO_FUNCAO_EQUIPE = stringPreferencesKey("tipo_funcao_equipe")
+        private val NOME_USUARIO = stringPreferencesKey("nome_usuario")
+    }
+
+    val nomeUsuario: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[NOME_USUARIO] ?: ""
     }
 
     val tipoFuncaoEquipe: Flow<TipoFuncaoEquipe> = context.dataStore.data.map { preferences ->
@@ -76,6 +81,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun salvarTipoFuncaoEquipe(tipo: TipoFuncaoEquipe) {
         context.dataStore.edit { preferences ->
             preferences[TIPO_FUNCAO_EQUIPE] = tipo.name
+        }
+    }
+
+    suspend fun salvarNomeUsuario(nome: String) {
+        context.dataStore.edit { preferences ->
+            preferences[NOME_USUARIO] = nome.trim().uppercase()
         }
     }
 }
