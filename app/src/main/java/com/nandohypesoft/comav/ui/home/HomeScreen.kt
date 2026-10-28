@@ -87,6 +87,10 @@ fun HomeScreen(viewModel: MainViewModel) {
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
+    LaunchedEffect(Unit) {
+        viewModel.consultarEPersistirPerfilDispositivoFirebase(context)
+    }
+
     LaunchedEffect(mostrarDialogSimulacaoNotificacoes) {
         if (mostrarDialogSimulacaoNotificacoes && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             launcherPermissaoNotificacao.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -710,14 +714,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                         IconButton(onClick = { mostrarDialogoCompartilharQr = true }) {
                             Icon(imageVector = Icons.Default.QrCode, contentDescription = "QR", tint = MaterialTheme.colorScheme.primary)
                         }
-                        IconButton(onClick = {
-                            if (tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER) {
-                                mostrarPainelAdmin = true
-                            } else {
-                                mostrarDialogPerfil = true
+                        if (tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER) {
+                            IconButton(onClick = { mostrarPainelAdmin = true }) {
+                                Icon(imageVector = Icons.Default.Settings, contentDescription = "Painel Admin", tint = MaterialTheme.colorScheme.primary)
                             }
-                        }) {
-                            Icon(imageVector = Icons.Default.Settings, contentDescription = "Configurações / Painel Admin", tint = MaterialTheme.colorScheme.primary)
                         }
                         Switch(
                             checked = temaEscuro,

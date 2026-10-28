@@ -2,6 +2,7 @@ package com.nandohypesoft.comav.ui
 
 import android.content.Context
 import android.net.Uri
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -28,6 +29,7 @@ import com.nandohypesoft.comav.util.NotificacaoManager
 import com.nandohypesoft.comav.util.NotificacaoWorker
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -134,6 +136,29 @@ class MainViewModel(
 
     val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
+
+    fun consultarEPersistirPerfilDispositivoFirebase(context: Context) {
+        viewModelScope.launch {
+            try {
+                val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: return@launch
+                val doc = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("perfis_dispositivos")
+                    .document(androidId)
+                    .get()
+                    .await()
+
+                if (doc != null && doc.exists()) {
+                    val funcaoStr = doc.getString("funcao")
+                    if (!funcaoStr.isNullOrBlank()) {
+                        try {
+                            val funcaoRemota = TipoFuncaoEquipe.valueOf(funcaoStr)
+                            userPreferencesRepository.salvarTipoFuncaoEquipe(funcaoRemota)
+                        } catch (_: Exception) {}
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
 
     fun salvarTipoFuncaoEquipe(context: Context, tipo: TipoFuncaoEquipe) {
         viewModelScope.launch {
