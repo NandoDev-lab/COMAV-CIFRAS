@@ -247,7 +247,8 @@ class MainViewModel(
                 ministroMaisFrequente = ministroTop,
                 cantorMaisFrequente = cantorTop
             )
-        }.sortedByDescending { it.totalUso }
+        }.filter { it.totalUso > 0 }
+         .sortedByDescending { it.totalUso }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
