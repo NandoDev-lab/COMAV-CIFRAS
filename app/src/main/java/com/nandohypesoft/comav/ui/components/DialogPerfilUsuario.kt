@@ -27,7 +27,7 @@ fun DialogPerfilUsuario(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "👤 Seu Perfil no Grupo de Louvor",
+                text = "👤 Seu Perfil no COMAV Cifras",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -38,15 +38,27 @@ fun DialogPerfilUsuario(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Para direcionar os alertas e notificações corretos para o seu celular, selecione sua função:",
+                    text = "A interface do aplicativo será personalizada de acordo com o seu perfil no grupo:",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 val opcoes = listOf(
-                    Triple(TipoFuncaoEquipe.MINISTRO_CANTOR, "🎤 Ministro / Cantor", "Recebe alertas para cadastrar louvores do culto"),
-                    Triple(TipoFuncaoEquipe.MUSICO, "🎸 Músico Instrumentista", "Recebe alertas para consultar cifras e ensaiar"),
-                    Triple(TipoFuncaoEquipe.AMBOS, "🎵 Ambos (Ministro e Músico)", "Recebe todos os alertas e notificações")
+                    Triple(
+                        TipoFuncaoEquipe.MINISTRO_CANTOR,
+                        "🎤 Ministro / Cantor",
+                        "Agendamento de cultos e visualização da lista de letras"
+                    ),
+                    Triple(
+                        TipoFuncaoEquipe.MUSICO,
+                        "🎸 Músico Instrumentista",
+                        "Acesso às cifras, letras e escalas dos cultos agendados"
+                    ),
+                    Triple(
+                        TipoFuncaoEquipe.ADMIN_LIDER,
+                        "👑 Líder / Desenvolvedor",
+                        "Acesso integral a todas as telas, funções e painel administrativo"
+                    )
                 )
 
                 opcoes.forEach { (tipo, titulo, descricao) ->
@@ -99,7 +111,7 @@ fun DialogPerfilUsuario(
                 },
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Confirmar Minha Função", fontWeight = FontWeight.Bold)
+                Text("Confirmar Perfil", fontWeight = FontWeight.Bold)
             }
         }
     )

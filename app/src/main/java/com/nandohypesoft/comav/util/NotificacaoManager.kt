@@ -106,7 +106,7 @@ object NotificacaoManager {
         val hojeStr = formatoIso.format(Date())
 
         // 1. Verificar cultos futuros cadastrados em escala_musicos_datas sem agendamento do ministro
-        if (eDiaAlertaMinistro && (funcaoUsuario == TipoFuncaoEquipe.MINISTRO_CANTOR || funcaoUsuario == TipoFuncaoEquipe.AMBOS)) {
+        if (eDiaAlertaMinistro && (funcaoUsuario == TipoFuncaoEquipe.MINISTRO_CANTOR || funcaoUsuario == TipoFuncaoEquipe.ADMIN_LIDER)) {
             val datasComMusicosSemAgendamento = escalasMusicosMap.keys.filter { dataIso ->
                 dataIso >= hojeStr && escalasCulto.none { it.dataCulto == dataIso }
             }
@@ -132,7 +132,7 @@ object NotificacaoManager {
         nomeMinistro: String,
         dataBr: String
     ) {
-        if (funcaoUsuario == TipoFuncaoEquipe.MUSICO || funcaoUsuario == TipoFuncaoEquipe.AMBOS) {
+        if (funcaoUsuario == TipoFuncaoEquipe.MUSICO || funcaoUsuario == TipoFuncaoEquipe.ADMIN_LIDER) {
             dispararNotificacaoLocal(
                 context = context,
                 titulo = "🎶 Novo Culto Agendado!",

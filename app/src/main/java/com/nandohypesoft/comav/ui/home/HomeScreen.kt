@@ -59,9 +59,6 @@ fun HomeScreen(viewModel: MainViewModel) {
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
     var mostrarPainelAdmin by remember { mutableStateOf(false) }
-    var mostrarDialogoSenhaAdmin by remember { mutableStateOf(false) }
-    var senhaAdminDigitada by remember { mutableStateOf("") }
-    var erroSenhaAdmin by remember { mutableStateOf(false) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
@@ -120,61 +117,6 @@ fun HomeScreen(viewModel: MainViewModel) {
             },
             onDismiss = {
                 mostrarDialogPerfil = false
-            }
-        )
-    }
-
-    // Diálogo de Senha Admin
-    if (mostrarDialogoSenhaAdmin) {
-        AlertDialog(
-            onDismissRequest = { mostrarDialogoSenhaAdmin = false },
-            title = { Text("Acesso Administrativo") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("Informe a senha para acessar o painel:", fontSize = 14.sp)
-                    OutlinedTextField(
-                        value = senhaAdminDigitada,
-                        onValueChange = {
-                            senhaAdminDigitada = it
-                            erroSenhaAdmin = false
-                        },
-                        placeholder = { Text("Senha") },
-                        singleLine = true,
-                        isError = erroSenhaAdmin,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (erroSenhaAdmin) {
-                        Text(
-                            text = "Senha incorreta!",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (senhaAdminDigitada == "27021986") {
-                            mostrarDialogoSenhaAdmin = false
-                            mostrarPainelAdmin = true
-                        } else {
-                            erroSenhaAdmin = true
-                        }
-                    }
-                ) {
-                    Text("Acessar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mostrarDialogoSenhaAdmin = false }) {
-                    Text("Cancelar")
-                }
             }
         )
     }
@@ -769,11 +711,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                             Icon(imageVector = Icons.Default.QrCode, contentDescription = "QR", tint = MaterialTheme.colorScheme.primary)
                         }
                         IconButton(onClick = {
-                            senhaAdminDigitada = ""
-                            erroSenhaAdmin = false
-                            mostrarDialogoSenhaAdmin = true
+                            if (tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER) {
+                                mostrarPainelAdmin = true
+                            } else {
+                                mostrarDialogPerfil = true
+                            }
                         }) {
-                            Icon(imageVector = Icons.Default.Settings, contentDescription = "Admin", tint = MaterialTheme.colorScheme.primary)
+                            Icon(imageVector = Icons.Default.Settings, contentDescription = "Configurações / Painel Admin", tint = MaterialTheme.colorScheme.primary)
                         }
                         Switch(
                             checked = temaEscuro,
@@ -809,19 +753,24 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            val podeCadastrarCulto = tipoFuncaoEquipe == TipoFuncaoEquipe.MINISTRO_CANTOR || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
+            val podeVerCifras = tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
+
             // 1. Cadastrar Louvores do Culto
-            Button(
-                onClick = { viewModel.abrirCriacaoCulto() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text("📅 Cadastrar Louvores do Culto", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            if (podeCadastrarCulto) {
+                Button(
+                    onClick = { viewModel.abrirCriacaoCulto() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("📅 Cadastrar Louvores do Culto", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
-            // 2. Botões Quadrados Lado a Lado (Lista de Letras e Lista de Cifras)
+            // 2. Botões Quadrados (Lista de Letras e Lista de Cifras)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -845,21 +794,23 @@ fun HomeScreen(viewModel: MainViewModel) {
                     }
                 }
 
-                Card(
-                    onClick = { viewModel.navegarPara(TelaDestino.LISTA_CIFRAS) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(110.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(12.dp),
-                        contentAlignment = Alignment.Center
+                if (podeVerCifras) {
+                    Card(
+                        onClick = { viewModel.navegarPara(TelaDestino.LISTA_CIFRAS) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(110.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("🎸", fontSize = 28.sp)
-                            Text("Lista de Cifras", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("🎸", fontSize = 28.sp)
+                                Text("Lista de Cifras", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
                         }
                     }
                 }
