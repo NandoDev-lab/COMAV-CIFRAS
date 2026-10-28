@@ -343,9 +343,8 @@ class MainViewModel(
                 if (context != null) {
                     NotificacaoManager.notificarAvisoMusicosNovoCulto(
                         context = context,
-                        funcaoUsuario = tipoFuncaoEquipe.value,
                         nomeMinistro = escalaFinal.nomeMinistro,
-                        dataBr = escalaFinal.dataCulto
+                        diaSemanaCulto = escalaFinal.diaSemana
                     )
                 }
 

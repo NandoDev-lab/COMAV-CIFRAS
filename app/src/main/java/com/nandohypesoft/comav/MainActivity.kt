@@ -28,26 +28,26 @@ import com.nandohypesoft.comav.ui.MainScreen
 import com.nandohypesoft.comav.ui.MainViewModel
 import com.nandohypesoft.comav.ui.MainViewModelFactory
 import com.nandohypesoft.comav.ui.theme.COMAVTheme
+import com.nandohypesoft.comav.util.SessaoManager
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
+    private val viewModel: MainViewModel by viewModels {
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = MusicaRepository(database.musicaDao())
         val userPreferencesRepository = UserPreferencesRepository(applicationContext)
+        MainViewModelFactory(
+            repository,
+            userPreferencesRepository,
+            database.escalaCultoDao(),
+            database.escalaMusicoDataDao()
+        )
+    }
 
-        val viewModel: MainViewModel by viewModels {
-            MainViewModelFactory(
-                repository,
-                userPreferencesRepository,
-                database.escalaCultoDao(),
-                database.escalaMusicoDataDao()
-            )
-        }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             val temaEscuro by viewModel.temaEscuro.collectAsState()
@@ -61,6 +61,32 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        SessaoManager.iniciarSessaoAtiva(
+            context = applicationContext,
+            nomeUsuario = viewModel.nomeUsuario.value,
+            tipoFuncao = viewModel.tipoFuncaoEquipe.value
+        )
+        SessaoManager.escutarAtividadesSessaoFirebase(
+            context = applicationContext,
+            tipoFuncao = viewModel.tipoFuncaoEquipe.value,
+            nomeUsuario = viewModel.nomeUsuario.value
+        )
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SessaoManager.encerrarSessaoAtiva(applicationContext)
+        SessaoManager.pararEscuta()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        SessaoManager.encerrarSessaoAtiva(applicationContext)
+        SessaoManager.pararEscuta()
     }
 }
 

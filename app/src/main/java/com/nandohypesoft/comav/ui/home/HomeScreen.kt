@@ -663,9 +663,8 @@ fun HomeScreen(viewModel: MainViewModel) {
                         onClick = {
                             NotificacaoManager.notificarAvisoMusicosNovoCulto(
                                 context = context,
-                                funcaoUsuario = TipoFuncaoEquipe.MUSICO,
-                                nomeMinistro = "Fernando",
-                                dataBr = "29/10/2026"
+                                nomeMinistro = "FERNANDO",
+                                diaSemanaCulto = "Domingo"
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),

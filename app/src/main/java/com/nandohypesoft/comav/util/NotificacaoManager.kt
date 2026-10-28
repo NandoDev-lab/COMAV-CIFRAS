@@ -129,17 +129,20 @@ object NotificacaoManager {
 
     fun notificarAvisoMusicosNovoCulto(
         context: Context,
-        funcaoUsuario: TipoFuncaoEquipe,
         nomeMinistro: String,
-        dataBr: String
+        diaSemanaCulto: String
     ) {
-        if (funcaoUsuario == TipoFuncaoEquipe.MUSICO || funcaoUsuario == TipoFuncaoEquipe.ADMIN_LIDER) {
-            dispararNotificacaoLocal(
-                context = context,
-                titulo = "🎶 Novo Culto Agendado!",
-                mensagem = "$nomeMinistro agendou os louvores do culto de $dataBr. Abra o app para ver as cifras e ensaiar!",
-                notificationId = 3001
-            )
-        }
+        val ministroFormatado = if (nomeMinistro.trim().uppercase().endsWith("A") ||
+            listOf("VAL", "NANDA", "FABIANA", "ISABELA", "ISABELE", "MAISA").contains(nomeMinistro.trim().uppercase())
+        ) "Ministra $nomeMinistro" else "Ministro $nomeMinistro"
+
+        val diaFormatado = if (diaSemanaCulto.isNotBlank()) diaSemanaCulto else "culto"
+
+        dispararNotificacaoLocal(
+            context = context,
+            titulo = "🎶 Louvores do Culto Agendados!",
+            mensagem = "$ministroFormatado acabou de cadastrar as músicas do culto de $diaFormatado.",
+            notificationId = 3001
+        )
     }
 }
