@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
@@ -71,6 +73,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
     var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
     var escalaParaDetalhes by remember { mutableStateOf<EscalaCulto?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val launcherExportarBackup = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -86,9 +89,18 @@ fun HomeScreen(viewModel: MainViewModel) {
         viewModel.consultarEPersistirPerfilDispositivoFirebase(context)
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.mensagemAlerta.collect { msg ->
+            if (msg != null) {
+                snackbarHostState.showSnackbar(msg)
+                viewModel.limparAlerta()
+            }
+        }
+    }
+
     LaunchedEffect(nomeUsuario) {
         if (nomeUsuario.isNotBlank()) {
-            Toast.makeText(context, SaudacaoUtil.gerarSaudacao(nomeUsuario), Toast.LENGTH_SHORT).show()
+            viewModel.exibirSaudacaoInicialSeNecessario(nomeUsuario)
         }
     }
 
@@ -542,6 +554,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -589,7 +602,14 @@ fun HomeScreen(viewModel: MainViewModel) {
                         viewModel.navegarPara(TelaDestino.LISTA_CIFRAS)
                     }
                 },
-                placeholder = { Text("Pesquisa rápida (#12, título ou trecho)...") },
+                placeholder = { 
+                    Text(
+                        text = "Pesquisa rápida (#12, título ou trecho)...",
+                        fontSize = 11.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    ) 
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -734,6 +754,8 @@ fun HomeScreen(viewModel: MainViewModel) {
                 }
             } else {
                 escalasAtivas.forEach { escala ->
+                    var expandido by remember(escala.id) { mutableStateOf(false) }
+
                     // Converter data yyyy-MM-dd para dd/MM/yyyy
                     val dataExibicao = try {
                         val d = formatoData.parse(escala.dataCulto)
@@ -751,77 +773,98 @@ fun HomeScreen(viewModel: MainViewModel) {
                         shape = RoundedCornerShape(16.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expandido = !expandido }
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "Ministro: ${escala.nomeMinistro}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-
-                            Text(
-                                text = "Culto: ${escala.diaSemana} — $dataExibicao",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            Text("Repertório:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            escala.itens.forEachIndexed { idx, item ->
-                                val extraTag = if (item.ehExtra) " [Extra]" else ""
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.padding(vertical = 2.dp)
-                                ) {
-                                    Text("${idx + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    if (item.identificadorMusica > 0) {
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer
-                                        ) {
-                                            Text(
-                                                text = "Nº ${item.identificadorMusica}",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "${item.tituloMusica} ${if (item.cantor.isNotBlank()) "— ${item.cantor}" else ""}$extraTag",
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                TextButton(onClick = { escalaParaDetalhes = escala }) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "ℹ️ detalhes da equipe",
+                                        text = "Ministro: ${escala.nomeMinistro}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+
+                                    Text(
+                                        text = "Culto: ${escala.diaSemana} — $dataExibicao",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                TextButton(onClick = { expandido = !expandido }) {
+                                    Text(
+                                        text = if (expandido) "Recolher" else "Expandir",
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontSize = 13.sp
                                     )
                                 }
+                            }
 
-                                if (podeEditar) {
-                                    TextButton(onClick = { viewModel.abrirEdicaoCulto(escala) }) {
-                                        Text("Editar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            if (expandido) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                Text("Repertório:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                escala.itens.forEachIndexed { idx, item ->
+                                    val extraTag = if (item.ehExtra) " [Extra]" else ""
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    ) {
+                                        Text("${idx + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        if (item.identificadorMusica > 0) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "Nº ${item.identificadorMusica}",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "${item.tituloMusica} ${if (item.cantor.isNotBlank()) "— ${item.cantor}" else ""}$extraTag",
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    TextButton(onClick = { escalaParaDetalhes = escala }) {
+                                        Text(
+                                            text = "ℹ️ detalhes da equipe",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+
+                                    if (podeEditar) {
+                                        TextButton(onClick = { viewModel.abrirEdicaoCulto(escala) }) {
+                                            Text("Editar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }

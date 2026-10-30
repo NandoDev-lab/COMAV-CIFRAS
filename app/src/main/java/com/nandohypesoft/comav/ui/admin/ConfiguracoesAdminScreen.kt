@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import com.nandohypesoft.comav.ui.MainViewModel
+import com.nandohypesoft.comav.ui.components.DialogPerfilUsuario
 import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.util.NotificacaoManager
 
@@ -29,11 +30,12 @@ import com.nandohypesoft.comav.util.NotificacaoManager
 fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     val context = LocalContext.current
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
+    val nomeUsuario by viewModel.nomeUsuario.collectAsState()
     val mostrarEst by viewModel.mostrarEstatisticas.collectAsState()
-    val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
     val escalas by viewModel.escalas.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
     var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
     var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
@@ -42,10 +44,12 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
-    LaunchedEffect(mensagemAlerta) {
-        mensagemAlerta?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
-            viewModel.limparAlerta()
+    LaunchedEffect(Unit) {
+        viewModel.mensagemAlerta.collect { msg ->
+            if (msg != null) {
+                snackbarHostState.showSnackbar(msg)
+                viewModel.limparAlerta()
+            }
         }
     }
 
@@ -222,6 +226,18 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
         )
     }
 
+    if (mostrarDialogPerfil) {
+        DialogPerfilUsuario(
+            funcaoAtual = tipoFuncaoEquipe,
+            nomeAtual = nomeUsuario,
+            onConfirmar = { novaFuncao, novoNome ->
+                viewModel.salvarPerfilENomeUsuario(context, novaFuncao, novoNome)
+                mostrarDialogPerfil = false
+            },
+            onDismiss = { mostrarDialogPerfil = false }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -253,14 +269,18 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text("👤 Nível de Acesso Logado:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
                         Text(
-                            text = tipoFuncaoEquipe.titulo,
+                            text = "${tipoFuncaoEquipe.titulo}${if (nomeUsuario.isNotBlank()) " — $nomeUsuario" else ""}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
+                    }
+
+                    TextButton(onClick = { mostrarDialogPerfil = true }) {
+                        Text("Trocar Perfil", fontWeight = FontWeight.Bold)
                     }
                 }
             }

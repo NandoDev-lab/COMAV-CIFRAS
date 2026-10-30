@@ -106,7 +106,6 @@ fun MainScreen(viewModel: MainViewModel) {
     val rascunho by viewModel.rascunho.collectAsState()
     val temaEscuro by viewModel.temaEscuro.collectAsState()
     val escalaFonte by viewModel.escalaFonte.collectAsState()
-    val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
 
     var musicaParaExcluir by remember { mutableStateOf<Musica?>(null) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
@@ -141,10 +140,12 @@ fun MainScreen(viewModel: MainViewModel) {
         return
     }
 
-    LaunchedEffect(mensagemAlerta) {
-        mensagemAlerta?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
-            viewModel.limparAlerta()
+    LaunchedEffect(Unit) {
+        viewModel.mensagemAlerta.collect { msg ->
+            if (msg != null) {
+                snackbarHostState.showSnackbar(msg)
+                viewModel.limparAlerta()
+            }
         }
     }
 
@@ -221,7 +222,14 @@ fun MainScreen(viewModel: MainViewModel) {
             OutlinedTextField(
                 value = consulta,
                 onValueChange = { viewModel.atualizarConsulta(it) },
-                placeholder = { Text(placeholderTexto) },
+                placeholder = { 
+                    Text(
+                        text = placeholderTexto,
+                        fontSize = 11.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    ) 
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth()

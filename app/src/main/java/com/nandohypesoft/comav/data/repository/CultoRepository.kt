@@ -55,7 +55,12 @@ class CultoRepository(
                 "criadaEm" to escalaComId.criadaEm
             )
             firestore?.collection("escala_cultos")?.document(idFinal)?.set(dadosEscala)?.await()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            val msgErro = e.localizedMessage ?: e.message ?: ""
+            if (msgErro.contains("PERMISSION_DENIED", ignoreCase = true)) {
+                throw IllegalArgumentException("Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase (Firestore Database -> Regras) para: allow read, write: if true;")
+            }
+        }
 
         idFinal
     }
@@ -132,17 +137,18 @@ class CultoRepository(
                 ?.document(escalaMusico.dataIso)
                 ?.set(escalaMusico)
                 ?.await()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            val msgErro = e.localizedMessage ?: e.message ?: ""
+            if (msgErro.contains("PERMISSION_DENIED", ignoreCase = true)) {
+                throw IllegalArgumentException("Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase (Firestore Database -> Regras) para: allow read, write: if true;")
+            }
+        }
     }
 
     suspend fun obterEscalaMusicoPorData(dataIso: String): EscalaMusicoData? = withContext(Dispatchers.IO) {
         if (dataIso.isBlank()) return@withContext null
         
-        // 1. Tentar Room
-        val local = escalaMusicoDataDao?.obterPorData(dataIso)?.toEscalaMusicoData()
-        if (local != null) return@withContext local
-
-        // 2. Tentar Firebase
+        // 1. Tentar Firebase para obter os dados mais recentes da nuvem
         try {
             val doc = firestore?.collection("escala_musicos_datas")?.document(dataIso)?.get()?.await()
             if (doc != null && doc.exists()) {
@@ -154,7 +160,9 @@ class CultoRepository(
             }
         } catch (_: Exception) {}
 
-        null
+        // 2. Se offline ou falhar, fallback para o BD local Room
+        val local = escalaMusicoDataDao?.obterPorData(dataIso)?.toEscalaMusicoData()
+        local
     }
 
     suspend fun listarTodasEscalasMusicosData(): List<EscalaMusicoData> = withContext(Dispatchers.IO) {

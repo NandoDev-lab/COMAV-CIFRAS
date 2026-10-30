@@ -140,6 +140,15 @@ class MainViewModel(
     val nomeUsuario: StateFlow<String> = userPreferencesRepository.nomeUsuario
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    private var saudacaoInicialExibida = false
+
+    fun exibirSaudacaoInicialSeNecessario(nome: String) {
+        if (!saudacaoInicialExibida && nome.isNotBlank()) {
+            saudacaoInicialExibida = true
+            _mensagemAlerta.value = com.nandohypesoft.comav.util.SaudacaoUtil.gerarSaudacao(nome)
+        }
+    }
+
     fun consultarEPersistirPerfilDispositivoFirebase(context: Context) {
         viewModelScope.launch {
             try {

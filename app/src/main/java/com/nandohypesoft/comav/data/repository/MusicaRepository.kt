@@ -150,7 +150,7 @@ class MusicaRepository(
                 "criadaEm" to musica.criadaEm,
                 "atualizadaEm" to musica.atualizadaEm
             )
-            firestore?.collection("musicas")?.document(docId)?.set(dadosMusica)
+            firestore?.collection("musicas")?.document(docId)?.set(dadosMusica)?.await()
         } catch (_: Exception) {}
     }
 
@@ -162,7 +162,7 @@ class MusicaRepository(
         musicaDao.excluir(identificador, tipoDeConteudo.name)
         try {
             val docId = "${identificador}_${tipoDeConteudo.name}"
-            firestore?.collection("musicas")?.document(docId)?.delete()
+            firestore?.collection("musicas")?.document(docId)?.delete()?.await()
         } catch (_: Exception) {}
     }
 
@@ -302,7 +302,13 @@ class MusicaRepository(
             }
             entidadesParaSalvar.size
         } catch (e: Exception) {
-            throw IllegalArgumentException("Falha ao sincronizar com Firebase: ${e.localizedMessage}")
+            val msgErro = e.localizedMessage ?: e.message ?: "Erro de conexão com o Firebase."
+            val msgFormatada = if (msgErro.contains("PERMISSION_DENIED", ignoreCase = true)) {
+                "Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase (Firestore Database -> Regras) para permitir leitura/gravação (allow read, write: if true;)."
+            } else {
+                "Falha ao sincronizar com Firebase: $msgErro"
+            }
+            throw IllegalArgumentException(msgFormatada)
         }
     }
 
@@ -328,39 +334,40 @@ class MusicaRepository(
         }
 
         var sucessoCount = 0
-        var ultimoErro: Exception? = null
+        val chunkSize = 100 // Firestore WriteBatch suporta até 500 operações por lote
 
-        for (entity in todasLocais) {
-            try {
-                val musica = entity.toMusica()
-                
-                val dadosMusica = mapOf(
-                    "identificador" to musica.identificador,
-                    "titulo" to musica.titulo,
-                    "conteudo" to musica.conteudo,
-                    "conteudoOriginal" to musica.conteudoOriginal,
-                    "tipoDeConteudo" to musica.tipoDeConteudo.name,
-                    "tipoDeOrigem" to musica.tipoDeOrigem.name,
-                    "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
-                    "criadaEm" to musica.criadaEm,
-                    "atualizadaEm" to musica.atualizadaEm
-                )
+        try {
+            for (chunk in todasLocais.chunked(chunkSize)) {
+                val batch = db.batch()
+                for (entity in chunk) {
+                    val musica = entity.toMusica()
+                    val dadosMusica = mapOf(
+                        "identificador" to musica.identificador,
+                        "titulo" to musica.titulo,
+                        "conteudo" to musica.conteudo,
+                        "conteudoOriginal" to musica.conteudoOriginal,
+                        "tipoDeConteudo" to musica.tipoDeConteudo.name,
+                        "tipoDeOrigem" to musica.tipoDeOrigem.name,
+                        "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
+                        "criadaEm" to musica.criadaEm,
+                        "atualizadaEm" to musica.atualizadaEm
+                    )
 
-                val docId = "${musica.identificador}_${musica.tipoDeConteudo.name}"
-                db.collection("musicas").document(docId).set(dadosMusica).await()
-                sucessoCount++
-            } catch (e: Exception) {
-                ultimoErro = e
+                    val docId = "${musica.identificador}_${musica.tipoDeConteudo.name}"
+                    val docRef = db.collection("musicas").document(docId)
+                    batch.set(docRef, dadosMusica)
+                }
+                batch.commit().await()
+                sucessoCount += chunk.size
             }
-        }
-
-        if (sucessoCount == 0 && ultimoErro != null) {
-            val msg = if (ultimoErro.localizedMessage?.contains("PERMISSION_DENIED") == true) {
-                "Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase para permitir leitura/gravação."
+        } catch (e: Exception) {
+            val msgErro = e.localizedMessage ?: e.message ?: "Erro de conexão com o Firebase."
+            val msgFormatada = if (msgErro.contains("PERMISSION_DENIED", ignoreCase = true)) {
+                "Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase (Firestore Database -> Regras) para permitir leitura/gravação (allow read, write: if true;)."
             } else {
-                ultimoErro.localizedMessage ?: "Erro de conexão com o Firebase."
+                "Falha ao enviar dados para o Firebase: $msgErro"
             }
-            throw IllegalArgumentException(msg)
+            throw IllegalArgumentException(msgFormatada)
         }
 
         sucessoCount
