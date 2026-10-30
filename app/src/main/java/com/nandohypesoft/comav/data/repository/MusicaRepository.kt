@@ -138,7 +138,19 @@ class MusicaRepository(
 
         try {
             val docId = "${idFinal}_${musicaNova.tipoDeConteudo.name}"
-            firestore?.collection("musicas")?.document(docId)?.set(entity.toMusica())
+            val musica = entity.toMusica()
+            val dadosMusica = mapOf(
+                "identificador" to musica.identificador,
+                "titulo" to musica.titulo,
+                "conteudo" to musica.conteudo,
+                "conteudoOriginal" to musica.conteudoOriginal,
+                "tipoDeConteudo" to musica.tipoDeConteudo.name,
+                "tipoDeOrigem" to musica.tipoDeOrigem.name,
+                "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
+                "criadaEm" to musica.criadaEm,
+                "atualizadaEm" to musica.atualizadaEm
+            )
+            firestore?.collection("musicas")?.document(docId)?.set(dadosMusica)
         } catch (_: Exception) {}
     }
 
@@ -284,8 +296,22 @@ class MusicaRepository(
         for (entity in todasLocais) {
             try {
                 val musica = entity.toMusica()
+                
+                // Converte a Data Class em Map explícito para evitar bugs de serialização no Firestore
+                val dadosMusica = mapOf(
+                    "identificador" to musica.identificador,
+                    "titulo" to musica.titulo,
+                    "conteudo" to musica.conteudo,
+                    "conteudoOriginal" to musica.conteudoOriginal,
+                    "tipoDeConteudo" to musica.tipoDeConteudo.name,
+                    "tipoDeOrigem" to musica.tipoDeOrigem.name,
+                    "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
+                    "criadaEm" to musica.criadaEm,
+                    "atualizadaEm" to musica.atualizadaEm
+                )
+
                 val docId = "${musica.identificador}_${musica.tipoDeConteudo.name}"
-                db.collection("musicas").document(docId).set(musica).await()
+                db.collection("musicas").document(docId).set(dadosMusica).await()
                 sucessoCount++
             } catch (e: Exception) {
                 // Ignora falha de uma música específica e continua

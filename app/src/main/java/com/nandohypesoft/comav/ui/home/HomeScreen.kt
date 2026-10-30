@@ -560,7 +560,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         }
                         if (podeAcessarAdmin) {
                             IconButton(onClick = { viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CONFIGURACOES_ADMIN) }) {
-                                Icon(imageVector = Icons.Default.Settings, contentDescription = "Painel Admin", tint = MaterialTheme.colorScheme.primary)
+                                Icon(imageVector = Icons.Default.Settings, contentDescription = "Configurações", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                         Switch(
