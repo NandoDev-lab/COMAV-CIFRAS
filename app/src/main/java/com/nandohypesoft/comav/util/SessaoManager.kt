@@ -90,6 +90,8 @@ object SessaoManager {
         val ehLiderOuDev = (tipoFuncao == TipoFuncaoEquipe.ADMIN_LIDER || nomeUsuario.trim().uppercase().contains("FERNANDO"))
         if (!ehLiderOuDev) return
 
+        val tempoInicioEscuta = System.currentTimeMillis() - 5000L // Ignorar eventos ocorridos antes da abertura do app
+
         try {
             val myAndroidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
             val firestore = FirebaseFirestore.getInstance()
@@ -101,9 +103,18 @@ object SessaoManager {
                     if (error != null || snapshot == null) return@addSnapshotListener
 
                     for (change in snapshot.documentChanges) {
+                        // Ignorar documentos existentes antigos carregados no snapshot inicial
+                        if (change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) continue
+
                         val doc = change.document
                         val dispositivoId = doc.getString("dispositivoId") ?: ""
                         if (dispositivoId == myAndroidId) continue // ignorar o próprio dispositivo
+
+                        val fimEm = doc.getLong("fimEm") ?: 0L
+                        val inicioEm = doc.getLong("inicioEm") ?: 0L
+                        val eventoTempo = maxOf(fimEm, inicioEm)
+
+                        if (eventoTempo < tempoInicioEscuta) continue
 
                         val nome = doc.getString("nomeUsuario") ?: "Membro"
                         val funcao = doc.getString("funcao") ?: "Membro"
@@ -127,36 +138,6 @@ object SessaoManager {
                         }
                     }
                 }
-
-            // 2. Escutar acessos gravados fora do horário comercial para avisar no horário comercial
-            if (ehHorarioComercial()) {
-                listenerForaHorario?.remove()
-                listenerForaHorario = firestore.collection("historico_acessos_forahorario")
-                    .whereEqualTo("notificado", false)
-                    .addSnapshotListener { snapshot, error ->
-                        if (error != null || snapshot == null) return@addSnapshotListener
-
-                        for (doc in snapshot.documents) {
-                            val id = doc.id
-                            val dispositivoId = doc.getString("dispositivoId") ?: ""
-                            if (dispositivoId == myAndroidId) continue
-
-                            val nome = doc.getString("nomeUsuario") ?: "Membro"
-                            val funcao = doc.getString("funcao") ?: "Membro"
-                            val horario = doc.getString("horario") ?: "N/D"
-
-                            NotificacaoManager.dispararNotificacaoLocal(
-                                context = context,
-                                titulo = "🌙 Acesso Fora do Horário",
-                                mensagem = "$funcao $nome acessou às $horario",
-                                notificationId = (id.hashCode() and 0x7FFFFFFF)
-                            )
-
-                            // Marcar como notificado
-                            firestore.collection("historico_acessos_forahorario").document(id).update("notificado", true)
-                        }
-                    }
-            }
         } catch (_: Exception) {}
     }
 

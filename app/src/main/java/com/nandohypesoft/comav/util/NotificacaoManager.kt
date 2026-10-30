@@ -51,26 +51,10 @@ object NotificacaoManager {
                 .setAutoCancel(true)
 
             val notificationManager = NotificationManagerCompat.from(context)
-            if (!notificationManager.areNotificationsEnabled()) {
-                Toast.makeText(
-                    context,
-                    "⚠️ As notificações do aplicativo estão desativadas no Android! Ative nas configurações do celular.",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
+            if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(notificationId, builder.build())
             }
-
-            // Exibir Toast na tela como feedback imediato
-            Toast.makeText(
-                context,
-                "🔔 $titulo\n$mensagem",
-                Toast.LENGTH_LONG
-            ).show()
-
-        } catch (e: Exception) {
-            Toast.makeText(context, "Erro na notificação: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-        }
+        } catch (_: Exception) {}
     }
 
     fun registrarPerfilDispositivoFirebase(context: Context, funcao: TipoFuncaoEquipe, nomeUsuario: String = "") {
