@@ -1159,7 +1159,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Sincronização Remota via Gist:",
+                        text = "Sincronização Remota (Firebase/Gist):",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -1171,7 +1171,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             inputUrlGist = it
                             viewModel.salvarUrlGistRemota(it)
                         },
-                        placeholder = { Text("URL Raw do Gist (https://gist...)") },
+                        placeholder = { Text("URL Raw do Gist (Fallback)") },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -1185,7 +1185,20 @@ fun MainScreen(viewModel: MainViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("🔄 Sincronizar Banco do Gist")
+                        Text("🔄 Sincronizar Banco Remoto")
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            mostrarPainelAdmin = false
+                            viewModel.migrarParaFirebase()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("☁️ Migrar Base Local para Firebase")
                     }
                 }
             },

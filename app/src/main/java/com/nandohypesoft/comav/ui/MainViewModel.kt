@@ -371,14 +371,21 @@ class MainViewModel(
     private fun sincronizarGistSilencioso() {
         viewModelScope.launch {
             try {
-                val url = userPreferencesRepository.urlGistRemota.first().trim()
-                if (url.isNotEmpty()) {
-                    val qtd = repository.sincronizarComGistRemoto(url)
-                    if (qtd > 0) {
-                        recarregar()
+                // Tenta sincronizar com Firebase
+                repository.sincronizarComFirebase()
+                recarregar()
+            } catch (e: Exception) {
+                // Se falhar, faz fallback para Gist
+                try {
+                    val url = userPreferencesRepository.urlGistRemota.first().trim()
+                    if (url.isNotEmpty()) {
+                        val qtd = repository.sincronizarComGistRemoto(url)
+                        if (qtd > 0) {
+                            recarregar()
+                        }
                     }
-                }
-            } catch (_: Exception) {}
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -533,19 +540,39 @@ class MainViewModel(
 
     fun sincronizarComGist() {
         val url = urlGistRemota.value.trim()
-        if (url.isEmpty()) {
-            _mensagemAlerta.value = "Configure a URL Raw do Gist no Painel Administrativo primeiro."
-            return
-        }
 
         viewModelScope.launch {
             try {
-                _mensagemAlerta.value = "Conectando e baixando banco de cifras do Gist..."
-                val qtd = repository.sincronizarComGistRemoto(url)
+                _mensagemAlerta.value = "Conectando ao Firebase..."
+                val qtdFirebase = repository.sincronizarComFirebase()
                 recarregar()
-                _mensagemAlerta.value = "Sincronização concluída: $qtd música(s) atualizada(s) do Gist!"
+                _mensagemAlerta.value = "Sincronização concluída: $qtdFirebase música(s) atualizada(s) do Firebase!"
             } catch (e: Exception) {
-                _mensagemAlerta.value = "Erro na sincronização Gist: ${e.localizedMessage}"
+                // Fallback Gist
+                if (url.isEmpty()) {
+                    _mensagemAlerta.value = "Firebase falhou e a URL do Gist não está configurada."
+                    return@launch
+                }
+                try {
+                    _mensagemAlerta.value = "Firebase falhou. Baixando banco de cifras do Gist..."
+                    val qtd = repository.sincronizarComGistRemoto(url)
+                    recarregar()
+                    _mensagemAlerta.value = "Sincronização concluída: $qtd música(s) atualizada(s) do Gist!"
+                } catch (ex: Exception) {
+                    _mensagemAlerta.value = "Erro na sincronização Firebase/Gist: ${ex.localizedMessage}"
+                }
+            }
+        }
+    }
+
+    fun migrarParaFirebase() {
+        viewModelScope.launch {
+            try {
+                _mensagemAlerta.value = "Iniciando migração para o Firebase..."
+                val qtdMigrados = repository.migrarBancoParaFirebase()
+                _mensagemAlerta.value = "Migração concluída com sucesso! $qtdMigrados música(s) enviada(s)."
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao migrar para Firebase: ${e.localizedMessage}"
             }
         }
     }

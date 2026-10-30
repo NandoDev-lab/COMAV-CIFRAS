@@ -230,7 +230,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                     OutlinedTextField(
                         value = inputUrlGist,
                         onValueChange = { inputUrlGist = it },
-                        label = { Text("URL Raw do Gist (Backup)") },
+                        label = { Text("URL Raw do Gist (Fallback)") },
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -245,7 +245,20 @@ fun HomeScreen(viewModel: MainViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Sincronizar com Gist")
+                        Text("Sincronizar Banco Remoto")
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.migrarParaFirebase()
+                            mostrarPainelAdmin = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("☁️ Migrar Base Local para Firebase")
                     }
 
                     Button(

@@ -9,6 +9,8 @@ import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.MusicaNova
 import com.nandohypesoft.comav.model.TipoDeConteudo
 import com.nandohypesoft.comav.model.TipoDeOrigem
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.Normalizer
@@ -22,6 +24,13 @@ class MusicaRepository(
     private val musicaDao: MusicaDao,
     private val gson: Gson = Gson()
 ) {
+    private val firestore: FirebaseFirestore? by lazy {
+        try {
+            FirebaseFirestore.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun normalizarTitulo(titulo: String): String {
         val semAcento = Normalizer.normalize(titulo, Normalizer.Form.NFD)
@@ -126,6 +135,11 @@ class MusicaRepository(
         )
 
         musicaDao.salvar(entity)
+
+        try {
+            val docId = "${idFinal}_${musicaNova.tipoDeConteudo.name}"
+            firestore?.collection("musicas")?.document(docId)?.set(entity.toMusica())
+        } catch (_: Exception) {}
     }
 
     private fun seNaoDefinidoCriadaEm(todas: List<MusicaEntity>, id: Long, tipo: String, fallback: Long): Long {
@@ -134,6 +148,10 @@ class MusicaRepository(
 
     suspend fun excluirMusica(identificador: Long, tipoDeConteudo: TipoDeConteudo) {
         musicaDao.excluir(identificador, tipoDeConteudo.name)
+        try {
+            val docId = "${identificador}_${tipoDeConteudo.name}"
+            firestore?.collection("musicas")?.document(docId)?.delete()
+        } catch (_: Exception) {}
     }
 
     suspend fun exportarBanco(): BackupMusicas {
@@ -227,5 +245,70 @@ class MusicaRepository(
         }
 
         importarBanco(jsonTexto)
+    }
+
+    suspend fun sincronizarComFirebase(): Int = withContext(Dispatchers.IO) {
+        val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
+
+        val locaisAtuais = musicaDao.obterTodasParaBackup().associateBy { Pair(it.identificador, it.tipoDeConteudo) }
+        val entidadesParaSalvar = mutableListOf<MusicaEntity>()
+
+        try {
+            val result = db.collection("musicas").get().await()
+            for (doc in result.documents) {
+                val musica = doc.toObject(Musica::class.java) ?: continue
+                
+                val norm = normalizarTitulo(musica.titulo)
+                val chave = Pair(musica.identificador, musica.tipoDeConteudo.name)
+                val localExistente = locaisAtuais[chave]
+
+                val atualizadaEmFinal = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
+                val criadaEmFinal = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis()
+
+                if (localExistente != null && localExistente.atualizadaEm > atualizadaEmFinal) {
+                    entidadesParaSalvar.add(localExistente)
+                } else {
+                    entidadesParaSalvar.add(
+                        MusicaEntity(
+                            identificador = musica.identificador,
+                            titulo = musica.titulo.trim(),
+                            tituloNormalizado = norm,
+                            conteudo = musica.conteudo,
+                            conteudoOriginal = musica.conteudoOriginal,
+                            tipoDeConteudo = musica.tipoDeConteudo.name,
+                            tipoDeOrigem = musica.tipoDeOrigem.name,
+                            nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
+                            criadaEm = localExistente?.criadaEm ?: criadaEmFinal,
+                            atualizadaEm = atualizadaEmFinal
+                        )
+                    )
+                }
+            }
+            if (entidadesParaSalvar.isNotEmpty()) {
+                musicaDao.salvarTodas(entidadesParaSalvar)
+            }
+            entidadesParaSalvar.size
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Falha ao sincronizar com Firebase: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun migrarBancoParaFirebase(): Int = withContext(Dispatchers.IO) {
+        val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
+        
+        val todasLocais = musicaDao.obterTodasParaBackup()
+        var sucessoCount = 0
+
+        for (entity in todasLocais) {
+            try {
+                val musica = entity.toMusica()
+                val docId = "${musica.identificador}_${musica.tipoDeConteudo.name}"
+                db.collection("musicas").document(docId).set(musica).await()
+                sucessoCount++
+            } catch (e: Exception) {
+                // Ignora falha de uma música específica e continua
+            }
+        }
+        sucessoCount
     }
 }
