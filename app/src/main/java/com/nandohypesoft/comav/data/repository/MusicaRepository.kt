@@ -241,6 +241,15 @@ class MusicaRepository(
 
 // Sincronização via Gist Removida
 
+    private fun baixarJsonUrl(urlStr: String): String {
+        val url = URL(urlStr)
+        val connection = url.openConnection() as HttpURLConnection
+        connection.connectTimeout = 15000
+        connection.readTimeout = 15000
+        connection.requestMethod = "GET"
+        return connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+    }
+
     suspend fun sincronizarComFirebase(): Int = withContext(Dispatchers.IO) {
         val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
 
@@ -249,31 +258,41 @@ class MusicaRepository(
 
         try {
             val result = db.collection("musicas").get().await()
+            if (result.isEmpty) {
+                // Se o Firebase estiver vazio, faz a migração inicial da base local para a nuvem automaticamente!
+                return@withContext migrarBancoParaFirebase()
+            }
+
             for (doc in result.documents) {
-                val musica = doc.toObject(Musica::class.java) ?: continue
-                
-                val norm = normalizarTitulo(musica.titulo)
-                val chave = Pair(musica.identificador, musica.tipoDeConteudo.name)
+                val identificador = doc.getLong("identificador") ?: continue
+                val tipoStr = doc.getString("tipoDeConteudo") ?: "LETRA"
+                val titulo = doc.getString("titulo") ?: ""
+                val conteudo = doc.getString("conteudo") ?: ""
+                val conteudoOriginal = doc.getString("conteudoOriginal") ?: ""
+                val tipoOrigemStr = doc.getString("tipoDeOrigem") ?: "MANUAL"
+                val nomeArquivo = doc.getString("nomeDoArquivoDeOrigem") ?: ""
+                val criadaEm = doc.getLong("criadaEm") ?: System.currentTimeMillis()
+                val atualizadaEm = doc.getLong("atualizadaEm") ?: System.currentTimeMillis()
+
+                val norm = normalizarTitulo(titulo)
+                val chave = Pair(identificador, tipoStr)
                 val localExistente = locaisAtuais[chave]
 
-                val atualizadaEmFinal = if (musica.atualizadaEm > 0) musica.atualizadaEm else System.currentTimeMillis()
-                val criadaEmFinal = if (musica.criadaEm > 0) musica.criadaEm else System.currentTimeMillis()
-
-                if (localExistente != null && localExistente.atualizadaEm > atualizadaEmFinal) {
+                if (localExistente != null && localExistente.atualizadaEm > atualizadaEm) {
                     entidadesParaSalvar.add(localExistente)
                 } else {
                     entidadesParaSalvar.add(
                         MusicaEntity(
-                            identificador = musica.identificador,
-                            titulo = musica.titulo.trim(),
+                            identificador = identificador,
+                            titulo = titulo.trim(),
                             tituloNormalizado = norm,
-                            conteudo = musica.conteudo,
-                            conteudoOriginal = musica.conteudoOriginal,
-                            tipoDeConteudo = musica.tipoDeConteudo.name,
-                            tipoDeOrigem = musica.tipoDeOrigem.name,
-                            nomeArquivoOrigem = musica.nomeDoArquivoDeOrigem,
-                            criadaEm = localExistente?.criadaEm ?: criadaEmFinal,
-                            atualizadaEm = atualizadaEmFinal
+                            conteudo = conteudo,
+                            conteudoOriginal = conteudoOriginal,
+                            tipoDeConteudo = tipoStr,
+                            tipoDeOrigem = tipoOrigemStr,
+                            nomeArquivoOrigem = nomeArquivo,
+                            criadaEm = localExistente?.criadaEm ?: criadaEm,
+                            atualizadaEm = atualizadaEm
                         )
                     )
                 }
@@ -290,14 +309,31 @@ class MusicaRepository(
     suspend fun migrarBancoParaFirebase(): Int = withContext(Dispatchers.IO) {
         val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
         
-        val todasLocais = musicaDao.obterTodasParaBackup()
+        var todasLocais = musicaDao.obterTodasParaBackup()
+
+        // Se o banco local do celular estiver vazio, busca o acervo inicial de 89 cifras/letras
+        if (todasLocais.isEmpty()) {
+            val urlBase = "https://gist.githubusercontent.com/NandoDev-lab/c1cc5216eebad1cecf47d04adfc4d41b/raw/c5adc1ee2232062f0e5a190b4391fcc60b74e65e/comav_banco.json"
+            try {
+                val jsonTexto = baixarJsonUrl(urlBase)
+                importarBanco(jsonTexto)
+                todasLocais = musicaDao.obterTodasParaBackup()
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Banco local vazio e falha ao baixar base inicial: ${e.localizedMessage}")
+            }
+        }
+
+        if (todasLocais.isEmpty()) {
+            throw IllegalArgumentException("Nenhuma música encontrada no banco local para migrar.")
+        }
+
         var sucessoCount = 0
+        var ultimoErro: Exception? = null
 
         for (entity in todasLocais) {
             try {
                 val musica = entity.toMusica()
                 
-                // Converte a Data Class em Map explícito para evitar bugs de serialização no Firestore
                 val dadosMusica = mapOf(
                     "identificador" to musica.identificador,
                     "titulo" to musica.titulo,
@@ -314,9 +350,14 @@ class MusicaRepository(
                 db.collection("musicas").document(docId).set(dadosMusica).await()
                 sucessoCount++
             } catch (e: Exception) {
-                // Ignora falha de uma música específica e continua
+                ultimoErro = e
             }
         }
+
+        if (sucessoCount == 0 && ultimoErro != null) {
+            throw IllegalArgumentException("Falha ao enviar para o Firebase: ${ultimoErro.localizedMessage}")
+        }
+
         sucessoCount
     }
 }
