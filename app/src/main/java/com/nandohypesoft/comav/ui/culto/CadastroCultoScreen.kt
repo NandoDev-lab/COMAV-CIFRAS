@@ -138,12 +138,12 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 escalaEmEdicao!!.dataCulto
             }
         } else {
-            displayDateFormat.format(Date())
+            ""
         }
     }
 
     var dataCultoBr by remember { mutableStateOf(initialDateStr) }
-    var diaSemana by remember { mutableStateOf(escalaEmEdicao?.diaSemana?.takeIf { it.isNotBlank() } ?: "Domingo") }
+    var diaSemana by remember { mutableStateOf(escalaEmEdicao?.diaSemana?.takeIf { it.isNotBlank() } ?: "") }
 
     var tecladista by remember { mutableStateOf(escalaEmEdicao?.tecladista ?: "") }
     var violonista by remember { mutableStateOf(escalaEmEdicao?.violonista ?: "") }
@@ -377,21 +377,55 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = dataCultoBr,
-                onValueChange = { dataCultoBr = it },
-                label = { Text("Data do Culto (DD/MM/AAAA)") },
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
+            val opcoesDatas = remember {
+                val list = mutableListOf<Pair<String, String>>()
+                val cal = java.util.Calendar.getInstance()
+                for(i in 0..60) {
+                    val dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK)
+                    if (dayOfWeek == java.util.Calendar.SUNDAY || dayOfWeek == java.util.Calendar.THURSDAY) {
+                        val dateStr = displayDateFormat.format(cal.time)
+                        val dayStr = if (dayOfWeek == java.util.Calendar.SUNDAY) "Domingo" else "Quinta-feira"
+                        list.add(Pair(dateStr, dayStr))
+                    }
+                    cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+                }
+                list
+            }
+            
+            var dataExpanded by remember { mutableStateOf(false) }
 
-            OutlinedTextField(
-                value = diaSemana,
-                onValueChange = { diaSemana = it },
-                label = { Text("Dia da Semana (ex: Domingo, Quarta)") },
-                shape = RoundedCornerShape(10.dp),
+            ExposedDropdownMenuBox(
+                expanded = dataExpanded,
+                onExpandedChange = { dataExpanded = !dataExpanded },
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                OutlinedTextField(
+                    value = if (dataCultoBr.isBlank()) "Selecione a data..." else "$dataCultoBr - $diaSemana",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Data do Culto") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dataExpanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = dataExpanded,
+                    onDismissRequest = { dataExpanded = false }
+                ) {
+                    opcoesDatas.forEach { opcao ->
+                        DropdownMenuItem(
+                            text = { Text("${opcao.first} - ${opcao.second}") },
+                            onClick = {
+                                dataCultoBr = opcao.first
+                                diaSemana = opcao.second
+                                dataExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
@@ -412,7 +446,7 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Os músicos são definidos no Calendário pelo Administrador:",
+                        text = "Os músicos são definidos no Calendário pelo Líder:",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -555,7 +589,15 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
             Button(
                 onClick = {
-                    if (nomeMinistro.isBlank() || dataCultoBr.isBlank()) {
+                    val itensObrigatorios = itensForm.filter { !it.ehExtra }
+                    val todosObrigatoriosPreenchidos = itensObrigatorios.all { it.musica.isNotBlank() && it.cantor.isNotBlank() }
+
+                    if (nomeMinistro.isBlank() || dataCultoBr.isBlank() || diaSemana.isBlank() || !todosObrigatoriosPreenchidos) {
+                        android.widget.Toast.makeText(
+                            appContext,
+                            "Preencha o nome do ministro, a data e selecione as músicas obrigatórias e seus cantores.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
                         return@Button
                     }
 
@@ -594,7 +636,7 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Confirmar e Sincronizar (Firebase)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Confirmar Agendamento", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
