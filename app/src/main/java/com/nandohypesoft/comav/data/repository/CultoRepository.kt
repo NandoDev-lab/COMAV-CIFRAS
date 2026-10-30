@@ -35,7 +35,26 @@ class CultoRepository(
 
         // 2. Sincronizar com Firebase se online
         try {
-            firestore?.collection("escala_cultos")?.document(idFinal)?.set(escalaComId)?.await()
+            val itensList = escalaComId.itens.map { item ->
+                mapOf(
+                    "tituloMusica" to item.tituloMusica,
+                    "cantor" to item.cantor,
+                    "ehExtra" to item.ehExtra,
+                    "identificadorMusica" to item.identificadorMusica
+                )
+            }
+            val dadosEscala = mapOf(
+                "id" to escalaComId.id,
+                "nomeMinistro" to escalaComId.nomeMinistro,
+                "dataCulto" to escalaComId.dataCulto,
+                "diaSemana" to escalaComId.diaSemana,
+                "itens" to itensList,
+                "tecladista" to escalaComId.tecladista,
+                "violonista" to escalaComId.violonista,
+                "baterista" to escalaComId.baterista,
+                "criadaEm" to escalaComId.criadaEm
+            )
+            firestore?.collection("escala_cultos")?.document(idFinal)?.set(dadosEscala)?.await()
         } catch (_: Exception) {}
 
         idFinal
@@ -52,9 +71,40 @@ class CultoRepository(
         try {
             val snapshot = firestore?.collection("escala_cultos")?.get()?.await()
             if (snapshot != null) {
-                val remoteList = snapshot.toObjects(EscalaCulto::class.java)
-                remoteList.forEach { esc ->
-                    escalaCultoDao?.salvar(EscalaCultoEntity.fromEscalaCulto(esc))
+                for (doc in snapshot.documents) {
+                    try {
+                        val id = doc.getString("id") ?: continue
+                        val nomeMinistro = doc.getString("nomeMinistro") ?: ""
+                        val dataCulto = doc.getString("dataCulto") ?: ""
+                        val diaSemana = doc.getString("diaSemana") ?: ""
+                        val tecladista = doc.getString("tecladista") ?: ""
+                        val violonista = doc.getString("violonista") ?: ""
+                        val baterista = doc.getString("baterista") ?: ""
+                        val criadaEm = doc.getLong("criadaEm") ?: System.currentTimeMillis()
+                        
+                        val itensRaw = doc.get("itens") as? List<Map<String, Any>> ?: emptyList()
+                        val itensConvertidos = itensRaw.map { mapItem ->
+                            com.nandohypesoft.comav.model.ItemEscala(
+                                tituloMusica = mapItem["tituloMusica"] as? String ?: "",
+                                cantor = mapItem["cantor"] as? String ?: "",
+                                ehExtra = mapItem["ehExtra"] as? Boolean ?: false,
+                                identificadorMusica = (mapItem["identificadorMusica"] as? Number)?.toLong() ?: 0L
+                            )
+                        }
+
+                        val escala = EscalaCulto(
+                            id = id,
+                            nomeMinistro = nomeMinistro,
+                            dataCulto = dataCulto,
+                            diaSemana = diaSemana,
+                            tecladista = tecladista,
+                            violonista = violonista,
+                            baterista = baterista,
+                            criadaEm = criadaEm,
+                            itens = itensConvertidos
+                        )
+                        escalaCultoDao?.salvar(EscalaCultoEntity.fromEscalaCulto(escala))
+                    } catch (_: Exception) {}
                 }
             }
         } catch (_: Exception) {}
