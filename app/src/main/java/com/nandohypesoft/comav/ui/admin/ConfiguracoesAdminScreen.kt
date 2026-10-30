@@ -320,43 +320,51 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 onClick = {
                     viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CADASTRO_ENSAIO)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
             ) {
-                Text("🎸 Cadastrar Ensaio da Equipe", color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold)
+                Text("🎸 Cadastrar Ensaio da Equipe", color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             Button(
                 onClick = {
                     mostrarCalendarioMusicos = true
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("📅 Calendário Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                Text("📅 Escala Mensal de Equipes", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             Button(
                 onClick = {
                     mostrarGerenciadorCultos = true
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
             ) {
-                Text("🗑️ Gerenciar / Excluir Cultos Agendados", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
+                Text("🗑️ Gerenciar / Excluir Cultos Agendados", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             OutlinedButton(
                 onClick = {
                     mostrarDialogSimulacaoNotificacoes = true
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold)
+                Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             HorizontalDivider()

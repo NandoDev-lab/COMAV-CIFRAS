@@ -81,7 +81,7 @@ fun CalendarioEscalaMusicosDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "📅 Calendário de Músicos",
+                text = "📅 Escala Mensal de Equipes",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
