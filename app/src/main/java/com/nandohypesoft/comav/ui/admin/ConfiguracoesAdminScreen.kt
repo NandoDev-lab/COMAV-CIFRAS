@@ -24,6 +24,15 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     val context = LocalContext.current
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
     val mostrarEst by viewModel.mostrarEstatisticas.collectAsState()
+    val mensagemAlerta by viewModel.mensagemAlerta.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(mensagemAlerta) {
+        mensagemAlerta?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.limparAlerta()
+        }
+    }
 
     val launcherImportarDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -44,6 +53,7 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Configurações do Sistema") },
