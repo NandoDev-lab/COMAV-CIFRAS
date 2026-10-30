@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [MusicaEntity::class, EscalaCultoEntity::class, EscalaMusicoDataEntity::class, EnsaioEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

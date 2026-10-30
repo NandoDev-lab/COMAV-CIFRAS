@@ -63,15 +63,19 @@ fun CalendarioEscalaMusicosDialog(
     }
 
     var ministroEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.nomeMinistro) }
-    var vocaisEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.vocais) }
+    var vocal1Edicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.vocal1) }
+    var vocal2Edicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.vocal2) }
+    var vocal3Edicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.vocal3) }
     var tecladistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.tecladista) }
     var violonistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.violonista) }
     var bateristaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baterista) }
     var baixistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baixista) }
 
+    val opcoesVocais = listOf("Selecione...", "Val", "Fabiana", "Isabela", "Isabele", "Maisa", "Nanda", "Outro...")
     val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
     val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
     val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
+    val opcoesBaixo = listOf("Selecione...", "Lucas", "Outro...")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -273,13 +277,28 @@ fun CalendarioEscalaMusicosDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
-                        value = vocaisEdicao,
-                        onValueChange = { vocaisEdicao = it.uppercase() },
-                        label = { Text("🗣️ Vocais (Ex: FABIANA, VAL)") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    SeletorMusicoSpinner(
+                        label = "Vocal 1",
+                        icone = "🎤",
+                        musicoSelecionado = vocal1Edicao,
+                        opcoesMusicos = opcoesVocais,
+                        onMusicoSelecionado = { vocal1Edicao = it }
+                    )
+
+                    SeletorMusicoSpinner(
+                        label = "Vocal 2",
+                        icone = "🎤",
+                        musicoSelecionado = vocal2Edicao,
+                        opcoesMusicos = opcoesVocais,
+                        onMusicoSelecionado = { vocal2Edicao = it }
+                    )
+
+                    SeletorMusicoSpinner(
+                        label = "Vocal 3",
+                        icone = "🎤",
+                        musicoSelecionado = vocal3Edicao,
+                        opcoesMusicos = opcoesVocais,
+                        onMusicoSelecionado = { vocal3Edicao = it }
                     )
 
                     SeletorMusicoSpinner(
@@ -306,13 +325,12 @@ fun CalendarioEscalaMusicosDialog(
                         onMusicoSelecionado = { bateristaEdicao = it }
                     )
 
-                    OutlinedTextField(
-                        value = baixistaEdicao,
-                        onValueChange = { baixistaEdicao = it.uppercase() },
-                        label = { Text("🎸 Contra-Baixo (Ex: LUCAS)") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    SeletorMusicoSpinner(
+                        label = "Contra-Baixo",
+                        icone = "🎸",
+                        musicoSelecionado = baixistaEdicao,
+                        opcoesMusicos = opcoesBaixo,
+                        onMusicoSelecionado = { baixistaEdicao = it }
                     )
 
                     Button(
@@ -320,11 +338,13 @@ fun CalendarioEscalaMusicosDialog(
                             val novaEscalaMusicos = EscalaMusicoData(
                                 dataIso = dataIsoSelecionada,
                                 nomeMinistro = ministroEdicao.trim().uppercase(),
-                                vocais = vocaisEdicao.trim().uppercase(),
+                                vocal1 = vocal1Edicao.trim(),
+                                vocal2 = vocal2Edicao.trim(),
+                                vocal3 = vocal3Edicao.trim(),
                                 tecladista = tecladistaEdicao.trim(),
                                 violonista = violonistaEdicao.trim(),
                                 baterista = bateristaEdicao.trim(),
-                                baixista = baixistaEdicao.trim().uppercase()
+                                baixista = baixistaEdicao.trim()
                             )
                             viewModel.salvarEscalaMusicoData(novaEscalaMusicos)
 
@@ -336,11 +356,13 @@ fun CalendarioEscalaMusicosDialog(
                                     nomeMinistro = ministroEdicao.trim().uppercase(),
                                     dataCulto = dataIsoSelecionada,
                                     diaSemana = diaSemanaNome,
-                                    vocais = vocaisEdicao.trim().uppercase(),
+                                    vocal1 = vocal1Edicao.trim(),
+                                    vocal2 = vocal2Edicao.trim(),
+                                    vocal3 = vocal3Edicao.trim(),
                                     tecladista = tecladistaEdicao.trim(),
                                     violonista = violonistaEdicao.trim(),
                                     baterista = bateristaEdicao.trim(),
-                                    baixista = baixistaEdicao.trim().uppercase(),
+                                    baixista = baixistaEdicao.trim(),
                                     itens = escalaExistente?.itens ?: emptyList(),
                                     statusPreenchimento = escalaExistente?.statusPreenchimento ?: "PENDENTE_PREENCHIMENTO"
                                 )

@@ -9,7 +9,9 @@ data class EscalaMusicoDataEntity(
     @PrimaryKey
     val dataIso: String,
     val nomeMinistro: String = "",
-    val vocais: String = "",
+    val vocal1: String = "",
+    val vocal2: String = "",
+    val vocal3: String = "",
     val tecladista: String = "",
     val violonista: String = "",
     val baterista: String = "",
@@ -19,7 +21,9 @@ data class EscalaMusicoDataEntity(
         return EscalaMusicoData(
             dataIso = dataIso,
             nomeMinistro = nomeMinistro,
-            vocais = vocais,
+            vocal1 = vocal1,
+            vocal2 = vocal2,
+            vocal3 = vocal3,
             tecladista = tecladista,
             violonista = violonista,
             baterista = baterista,
@@ -32,7 +36,9 @@ data class EscalaMusicoDataEntity(
             return EscalaMusicoDataEntity(
                 dataIso = data.dataIso,
                 nomeMinistro = data.nomeMinistro,
-                vocais = data.vocais,
+                vocal1 = data.vocal1,
+                vocal2 = data.vocal2,
+                vocal3 = data.vocal3,
                 tecladista = data.tecladista,
                 violonista = data.violonista,
                 baterista = data.baterista,

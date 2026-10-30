@@ -32,11 +32,19 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
     var dataCultoBrInput by remember { mutableStateOf("") }
     var ministroInput by remember { mutableStateOf("") }
-    var vocaisInput by remember { mutableStateOf("") }
+    var vocal1Input by remember { mutableStateOf("") }
+    var vocal2Input by remember { mutableStateOf("") }
+    var vocal3Input by remember { mutableStateOf("") }
     var tecladistaInput by remember { mutableStateOf("") }
     var violonistaInput by remember { mutableStateOf("") }
     var bateristaInput by remember { mutableStateOf("") }
     var baixistaInput by remember { mutableStateOf("") }
+
+    val opcoesVocais = listOf("Selecione...", "Val", "Fabiana", "Isabela", "Isabele", "Maisa", "Nanda", "Outro...")
+    val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
+    val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
+    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
+    val opcoesBaixo = listOf("Selecione...", "Lucas", "Outro...")
 
     val diaSemanaCalculado = remember(dataCultoBrInput) {
         try {
@@ -133,55 +141,75 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
             HorizontalDivider()
 
             Text(
-                text = "👥 Equipe Escalada (Vocais e Músicos):",
+                text = "🗣️ Backing Vocais (Até 3 por culto):",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            OutlinedTextField(
-                value = vocaisInput,
-                onValueChange = { vocaisInput = it.uppercase() },
-                label = { Text("Vocais (Ex: FABIANA, VAL)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorMusicoSpinner(
+                label = "Vocal 1",
+                icone = "🎤",
+                musicoSelecionado = vocal1Input,
+                opcoesMusicos = opcoesVocais,
+                onMusicoSelecionado = { vocal1Input = it }
             )
 
-            OutlinedTextField(
-                value = tecladistaInput,
-                onValueChange = { tecladistaInput = it.uppercase() },
-                label = { Text("Teclado (Ex: DANIEL)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorMusicoSpinner(
+                label = "Vocal 2",
+                icone = "🎤",
+                musicoSelecionado = vocal2Input,
+                opcoesMusicos = opcoesVocais,
+                onMusicoSelecionado = { vocal2Input = it }
             )
 
-            OutlinedTextField(
-                value = violonistaInput,
-                onValueChange = { violonistaInput = it.uppercase() },
-                label = { Text("Violão (Ex: FERNANDO)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorMusicoSpinner(
+                label = "Vocal 3",
+                icone = "🎤",
+                musicoSelecionado = vocal3Input,
+                opcoesMusicos = opcoesVocais,
+                onMusicoSelecionado = { vocal3Input = it }
             )
 
-            OutlinedTextField(
-                value = bateristaInput,
-                onValueChange = { bateristaInput = it.uppercase() },
-                label = { Text("Bateria (Ex: VICTOR)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            HorizontalDivider()
+
+            Text(
+                text = "🎸 Equipe de Músicos:",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary
             )
 
-            OutlinedTextField(
-                value = baixistaInput,
-                onValueChange = { baixistaInput = it.uppercase() },
-                label = { Text("Contra-Baixo (Ex: LUCAS)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorMusicoSpinner(
+                label = "Teclado",
+                icone = "🎹",
+                musicoSelecionado = tecladistaInput,
+                opcoesMusicos = opcoesTeclado,
+                onMusicoSelecionado = { tecladistaInput = it }
+            )
+
+            SeletorMusicoSpinner(
+                label = "Violão",
+                icone = "🎸",
+                musicoSelecionado = violonistaInput,
+                opcoesMusicos = opcoesViolao,
+                onMusicoSelecionado = { violonistaInput = it }
+            )
+
+            SeletorMusicoSpinner(
+                label = "Bateria",
+                icone = "🥁",
+                musicoSelecionado = bateristaInput,
+                opcoesMusicos = opcoesBateria,
+                onMusicoSelecionado = { bateristaInput = it }
+            )
+
+            SeletorMusicoSpinner(
+                label = "Contra-Baixo",
+                icone = "🎸",
+                musicoSelecionado = baixistaInput,
+                opcoesMusicos = opcoesBaixo,
+                onMusicoSelecionado = { baixistaInput = it }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -209,7 +237,9 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                         nomeMinistro = ministroInput.trim().uppercase(),
                         dataCulto = storageDateStr,
                         diaSemana = diaSemanaCalculado,
-                        vocais = vocaisInput.trim().uppercase(),
+                        vocal1 = vocal1Input.trim(),
+                        vocal2 = vocal2Input.trim(),
+                        vocal3 = vocal3Input.trim(),
                         tecladista = tecladistaInput.trim().uppercase(),
                         violonista = violonistaInput.trim().uppercase(),
                         baterista = bateristaInput.trim().uppercase(),

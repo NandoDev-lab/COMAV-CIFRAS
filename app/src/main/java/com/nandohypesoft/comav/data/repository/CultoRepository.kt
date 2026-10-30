@@ -48,6 +48,9 @@ class CultoRepository(
                 "nomeMinistro" to escalaComId.nomeMinistro,
                 "dataCulto" to escalaComId.dataCulto,
                 "diaSemana" to escalaComId.diaSemana,
+                "vocal1" to escalaComId.vocal1,
+                "vocal2" to escalaComId.vocal2,
+                "vocal3" to escalaComId.vocal3,
                 "vocais" to escalaComId.vocais,
                 "tecladista" to escalaComId.tecladista,
                 "violonista" to escalaComId.violonista,
@@ -87,7 +90,10 @@ class CultoRepository(
                         val nomeMinistro = doc.getString("nomeMinistro") ?: ""
                         val dataCulto = doc.getString("dataCulto") ?: ""
                         val diaSemana = doc.getString("diaSemana") ?: ""
-                        val vocais = doc.getString("vocais") ?: ""
+                        val vocal1 = doc.getString("vocal1") ?: ""
+                        val vocal2 = doc.getString("vocal2") ?: ""
+                        val vocal3 = doc.getString("vocal3") ?: ""
+                        val vocaisRaw = doc.getString("vocais") ?: ""
                         val tecladista = doc.getString("tecladista") ?: ""
                         val violonista = doc.getString("violonista") ?: ""
                         val baterista = doc.getString("baterista") ?: ""
@@ -95,7 +101,13 @@ class CultoRepository(
                         val statusPreenchimento = doc.getString("statusPreenchimento") ?: "PENDENTE_PREENCHIMENTO"
                         val criadaEm = doc.getLong("criadaEm") ?: System.currentTimeMillis()
                         val preenchidaEm = doc.getLong("preenchidaEm") ?: 0L
-                        
+
+                        // Se vocal1 estiver vazio mas vocaisRaw possuir nomes separados por virgula
+                        val partesVocais = if (vocaisRaw.isNotBlank() && vocal1.isBlank()) vocaisRaw.split(",").map { it.trim() } else emptyList()
+                        val v1Final = if (vocal1.isNotBlank()) vocal1 else partesVocais.getOrNull(0) ?: ""
+                        val v2Final = if (vocal2.isNotBlank()) vocal2 else partesVocais.getOrNull(1) ?: ""
+                        val v3Final = if (vocal3.isNotBlank()) vocal3 else partesVocais.getOrNull(2) ?: ""
+
                         val itensRaw = doc.get("itens") as? List<Map<String, Any>> ?: emptyList()
                         val itensConvertidos = itensRaw.map { mapItem ->
                             com.nandohypesoft.comav.model.ItemEscala(
@@ -111,7 +123,9 @@ class CultoRepository(
                             nomeMinistro = nomeMinistro,
                             dataCulto = dataCulto,
                             diaSemana = diaSemana,
-                            vocais = vocais,
+                            vocal1 = v1Final,
+                            vocal2 = v2Final,
+                            vocal3 = v3Final,
                             tecladista = tecladista,
                             violonista = violonista,
                             baterista = baterista,
