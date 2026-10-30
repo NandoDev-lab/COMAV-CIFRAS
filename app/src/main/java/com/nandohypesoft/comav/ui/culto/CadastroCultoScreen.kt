@@ -628,13 +628,18 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                     val bateristaFinal = baterista.trim().ifBlank { musicoData?.baterista ?: "" }
 
                     val novaEscala = EscalaCulto(
+                        id = escalaEmEdicao?.id ?: "",
                         nomeMinistro = nomeMinistro.trim(),
                         dataCulto = dataStorage,
                         diaSemana = diaSemana.trim(),
+                        vocais = escalaEmEdicao?.vocais ?: "",
                         itens = itens,
                         tecladista = tecladistaFinal,
                         violonista = violonistaFinal,
-                        baterista = bateristaFinal
+                        baterista = bateristaFinal,
+                        baixista = escalaEmEdicao?.baixista ?: "",
+                        statusPreenchimento = "PREENCHIDO",
+                        preenchidaEm = System.currentTimeMillis()
                     )
 
                     viewModel.salvarEscalaCulto(escala = novaEscala, context = appContext, onSuccess = {

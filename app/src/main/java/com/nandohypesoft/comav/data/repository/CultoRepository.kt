@@ -48,11 +48,15 @@ class CultoRepository(
                 "nomeMinistro" to escalaComId.nomeMinistro,
                 "dataCulto" to escalaComId.dataCulto,
                 "diaSemana" to escalaComId.diaSemana,
-                "itens" to itensList,
+                "vocais" to escalaComId.vocais,
                 "tecladista" to escalaComId.tecladista,
                 "violonista" to escalaComId.violonista,
                 "baterista" to escalaComId.baterista,
-                "criadaEm" to escalaComId.criadaEm
+                "baixista" to escalaComId.baixista,
+                "itens" to itensList,
+                "statusPreenchimento" to escalaComId.statusPreenchimento,
+                "criadaEm" to escalaComId.criadaEm,
+                "preenchidaEm" to escalaComId.preenchidaEm
             )
             firestore?.collection("escala_cultos")?.document(idFinal)?.set(dadosEscala)?.await()
         } catch (e: Exception) {
@@ -78,14 +82,19 @@ class CultoRepository(
             if (snapshot != null) {
                 for (doc in snapshot.documents) {
                     try {
+                        if (!doc.exists() || doc.data.isNullOrEmpty()) continue
                         val id = doc.getString("id") ?: continue
                         val nomeMinistro = doc.getString("nomeMinistro") ?: ""
                         val dataCulto = doc.getString("dataCulto") ?: ""
                         val diaSemana = doc.getString("diaSemana") ?: ""
+                        val vocais = doc.getString("vocais") ?: ""
                         val tecladista = doc.getString("tecladista") ?: ""
                         val violonista = doc.getString("violonista") ?: ""
                         val baterista = doc.getString("baterista") ?: ""
+                        val baixista = doc.getString("baixista") ?: ""
+                        val statusPreenchimento = doc.getString("statusPreenchimento") ?: "PENDENTE_PREENCHIMENTO"
                         val criadaEm = doc.getLong("criadaEm") ?: System.currentTimeMillis()
+                        val preenchidaEm = doc.getLong("preenchidaEm") ?: 0L
                         
                         val itensRaw = doc.get("itens") as? List<Map<String, Any>> ?: emptyList()
                         val itensConvertidos = itensRaw.map { mapItem ->
@@ -102,11 +111,15 @@ class CultoRepository(
                             nomeMinistro = nomeMinistro,
                             dataCulto = dataCulto,
                             diaSemana = diaSemana,
+                            vocais = vocais,
                             tecladista = tecladista,
                             violonista = violonista,
                             baterista = baterista,
+                            baixista = baixista,
+                            itens = itensConvertidos,
+                            statusPreenchimento = statusPreenchimento,
                             criadaEm = criadaEm,
-                            itens = itensConvertidos
+                            preenchidaEm = preenchidaEm
                         )
                         escalaCultoDao?.salvar(EscalaCultoEntity.fromEscalaCulto(escala))
                     } catch (_: Exception) {}

@@ -15,11 +15,15 @@ data class EscalaCultoEntity(
     val nomeMinistro: String,
     val dataCulto: String,
     val diaSemana: String,
-    val itensJson: String,
+    val vocais: String = "",
     val tecladista: String = "",
     val violonista: String = "",
     val baterista: String = "",
-    val criadaEm: Long
+    val baixista: String = "",
+    val itensJson: String,
+    val statusPreenchimento: String = "PENDENTE_PREENCHIMENTO",
+    val criadaEm: Long,
+    val preenchidaEm: Long = 0L
 ) {
     fun toEscalaCulto(gson: Gson = Gson()): EscalaCulto {
         val type = object : TypeToken<List<ItemEscala>>() {}.type
@@ -29,11 +33,15 @@ data class EscalaCultoEntity(
             nomeMinistro = nomeMinistro,
             dataCulto = dataCulto,
             diaSemana = diaSemana,
-            itens = itensList,
+            vocais = vocais,
             tecladista = tecladista,
             violonista = violonista,
             baterista = baterista,
-            criadaEm = criadaEm
+            baixista = baixista,
+            itens = itensList,
+            statusPreenchimento = statusPreenchimento,
+            criadaEm = criadaEm,
+            preenchidaEm = preenchidaEm
         )
     }
 
@@ -44,11 +52,15 @@ data class EscalaCultoEntity(
                 nomeMinistro = escala.nomeMinistro,
                 dataCulto = escala.dataCulto,
                 diaSemana = escala.diaSemana,
-                itensJson = gson.toJson(escala.itens),
+                vocais = escala.vocais,
                 tecladista = escala.tecladista,
                 violonista = escala.violonista,
                 baterista = escala.baterista,
-                criadaEm = escala.criadaEm
+                baixista = escala.baixista,
+                itensJson = gson.toJson(escala.itens),
+                statusPreenchimento = escala.statusPreenchimento,
+                criadaEm = escala.criadaEm,
+                preenchidaEm = escala.preenchidaEm
             )
         }
     }

@@ -653,17 +653,95 @@ fun HomeScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // 1. Cadastrar Louvores do Culto
-            if (podeCadastrarCulto) {
-                Button(
-                    onClick = { viewModel.abrirCriacaoCulto() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            val formatoData = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+            val formatoDisplay = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+            val hojeStr = remember { formatoData.format(Date()) }
+            val hojeDate = remember { formatoData.parse(hojeStr) ?: Date() }
+
+            // Card Editável de Preenchimento para o Ministro Escalado
+            val escalaMinistroAtiva = escalas.find { escala ->
+                val ehMinistroEscalado = escala.nomeMinistro.equals(nomeUsuario.trim(), ignoreCase = true) || podeAcessarAdmin
+                if (!ehMinistroEscalado) return@find false
+
+                try {
+                    val cultoDate = formatoData.parse(escala.dataCulto) ?: return@find false
+                    val diffMillis = cultoDate.time - hojeDate.time
+                    val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+                    // Disponível a partir do domingo anterior (até 7 dias antes do culto)
+                    diffDays in 0..7 && escala.statusPreenchimento == "PENDENTE_PREENCHIMENTO"
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            if (escalaMinistroAtiva != null) {
+                val dataExibicaoAtiva = try {
+                    val d = formatoData.parse(escalaMinistroAtiva.dataCulto)
+                    if (d != null) formatoDisplay.format(d) else escalaMinistroAtiva.dataCulto
+                } catch (_: Exception) {
+                    escalaMinistroAtiva.dataCulto
+                }
+
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("📅 Cadastrar Louvores do Culto", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🎼 Preenchimento de Louvores do Culto",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    text = "⏳ PENDENTE",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Culto: ${escalaMinistroAtiva.diaSemana} — $dataExibicaoAtiva",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+
+                        Text(
+                            text = "Você está escalada(o) como ministra(o) para este culto. Por favor, cadastre e confirme os louvores do repertório até terça-feira!",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+
+                        Button(
+                            onClick = {
+                                viewModel.abrirEdicaoCulto(escalaMinistroAtiva)
+                                viewModel.navegarPara(TelaDestino.CADASTRO_CULTO)
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🎵 Cadastrar / Editar Louvores do Culto", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
                 }
             }
 
@@ -728,11 +806,6 @@ fun HomeScreen(viewModel: MainViewModel) {
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-
-            val formatoData = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val formatoDisplay = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val hojeStr = formatoData.format(Date())
-            val hojeDate = formatoData.parse(hojeStr) ?: Date()
 
             // --- SEÇÃO DE ENSAIOS DA EQUIPE ---
             val ensaiosAtivos = ensaios.filter { it.dataEnsaio >= hojeStr }
@@ -1027,34 +1100,59 @@ fun HomeScreen(viewModel: MainViewModel) {
                             if (expandido) {
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+                                if (escala.vocais.isNotBlank()) {
+                                    Text("🎤 Vocais: ${escala.vocais}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                                }
+
+                                val temMusicos = escala.tecladista.isNotBlank() || escala.violonista.isNotBlank() || escala.baterista.isNotBlank() || escala.baixista.isNotBlank()
+                                if (temMusicos) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text("🎸 Músicos Escalados:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        if (escala.tecladista.isNotBlank()) Text("  • Teclado: ${escala.tecladista}", fontSize = 12.sp)
+                                        if (escala.violonista.isNotBlank()) Text("  • Violão: ${escala.violonista}", fontSize = 12.sp)
+                                        if (escala.baterista.isNotBlank()) Text("  • Bateria: ${escala.baterista}", fontSize = 12.sp)
+                                        if (escala.baixista.isNotBlank()) Text("  • Baixo: ${escala.baixista}", fontSize = 12.sp)
+                                    }
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
                                 Text("Repertório:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                escala.itens.forEachIndexed { idx, item ->
-                                    val extraTag = if (item.ehExtra) " [Extra]" else ""
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        Text("${idx + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        if (item.identificadorMusica > 0) {
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = MaterialTheme.colorScheme.primaryContainer
-                                            ) {
-                                                Text(
-                                                    text = "Nº ${item.identificadorMusica}",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                )
+                                if (escala.itens.isEmpty()) {
+                                    Text(
+                                        text = "⏳ Louvores ainda não cadastrados pela ministra/ministro.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    escala.itens.forEachIndexed { idx, item ->
+                                        val extraTag = if (item.ehExtra) " [Extra]" else ""
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        ) {
+                                            Text("${idx + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            if (item.identificadorMusica > 0) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.primaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = "Nº ${item.identificadorMusica}",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
                                             }
+                                            Text(
+                                                text = "${item.tituloMusica} ${if (item.cantor.isNotBlank()) "— ${item.cantor}" else ""}$extraTag",
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
                                         }
-                                        Text(
-                                            text = "${item.tituloMusica} ${if (item.cantor.isNotBlank()) "— ${item.cantor}" else ""}$extraTag",
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
                                     }
                                 }
 
