@@ -66,29 +66,16 @@ fun HomeScreen(viewModel: MainViewModel) {
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
-    var mostrarPainelAdmin by remember { mutableStateOf(false) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
     var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
     var escalaParaDetalhes by remember { mutableStateOf<EscalaCulto?>(null) }
 
-    val launcherImportarDoc = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.importarDocumento(context, it) }
-    }
-
     val launcherExportarBackup = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let { viewModel.exportarBackup(context, it) }
-    }
-
-    val launcherImportarBackup = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.importarBackup(context, it) }
     }
 
     val launcherPermissaoNotificacao = rememberLauncherForActivityResult(
@@ -140,156 +127,7 @@ fun HomeScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Painel Administrativo Completo
-    if (mostrarPainelAdmin) {
-        AlertDialog(
-            onDismissRequest = { mostrarPainelAdmin = false },
-            title = { Text("Painel Administrativo") },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    val mostrarEst by viewModel.mostrarEstatisticas.collectAsState()
-
-                    Surface(
-                        onClick = { mostrarDialogPerfil = true },
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("👤 Sua Função no Grupo de Louvor:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                                Text(
-                                    text = tipoFuncaoEquipe.titulo,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            Text("Alterar", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Surface(
-                        onClick = { viewModel.alterarMostrarEstatisticas(!mostrarEst) },
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (mostrarEst) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (mostrarEst) "Estatísticas: Visíveis no Início" else "Estatísticas: Ocultas",
-                                fontWeight = FontWeight.Bold,
-                                color = if (mostrarEst) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Switch(
-                                checked = mostrarEst,
-                                onCheckedChange = { viewModel.alterarMostrarEstatisticas(it) }
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            mostrarCalendarioMusicos = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text("📅 Calendário Escala de Músicos", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            mostrarDialogSimulacaoNotificacoes = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold)
-                    }
-
-// Gist fields removidos
-
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.migrarParaFirebase()
-                            mostrarPainelAdmin = false
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("☁️ Migrar Base Local para Firebase")
-                    }
-
-                    Button(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            mostrarGerenciadorCultos = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Text("Gerenciar / Excluir Cultos", color = MaterialTheme.colorScheme.onErrorContainer)
-                    }
-
-                    Button(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            launcherImportarDoc.launch(arrayOf("*/*"))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Importar DOCX / PDF")
-                    }
-
-                    Button(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            launcherImportarBackup.launch(arrayOf("application/json"))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Importar Backup (JSON)")
-                    }
-
-                    Button(
-                        onClick = {
-                            mostrarPainelAdmin = false
-                            launcherExportarBackup.launch("comav_backup.json")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Exportar Backup")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { mostrarPainelAdmin = false }) {
-                    Text("Fechar")
-                }
-            }
-        )
-    }
+    // Painel Administrativo agora é uma tela separada
 
     // Diálogo Gerenciar Escala de Músicos (Exclusivo Administrador)
     if (mostrarGerenciadorEscalaMusicos) {
@@ -721,7 +559,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                             Icon(imageVector = Icons.Default.QrCode, contentDescription = "QR", tint = MaterialTheme.colorScheme.primary)
                         }
                         if (podeAcessarAdmin) {
-                            IconButton(onClick = { mostrarPainelAdmin = true }) {
+                            IconButton(onClick = { viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CONFIGURACOES_ADMIN) }) {
                                 Icon(imageVector = Icons.Default.Settings, contentDescription = "Painel Admin", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
@@ -906,7 +744,8 @@ fun HomeScreen(viewModel: MainViewModel) {
 
                     val cultoDate = try { formatoData.parse(escala.dataCulto) } catch (_: Exception) { null }
                     val diffDays = if (cultoDate != null) (cultoDate.time - hojeDate.time) / (1000 * 60 * 60 * 24) else 0L
-                    val podeEditar = diffDays >= 1 // Visível até 1 dia antes
+                    val ehDonoOuAdmin = podeAcessarAdmin || escala.nomeMinistro.equals(nomeUsuario.trim(), ignoreCase = true)
+                    val podeEditar = diffDays >= 1 && ehDonoOuAdmin // Visível até 1 dia antes e apenas para o criador ou admin
 
                     Card(
                         shape = RoundedCornerShape(16.dp),

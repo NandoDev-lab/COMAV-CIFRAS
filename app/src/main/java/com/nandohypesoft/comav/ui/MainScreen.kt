@@ -136,6 +136,11 @@ fun MainScreen(viewModel: MainViewModel) {
         return
     }
 
+    if (telaAtual == TelaDestino.CONFIGURACOES_ADMIN) {
+        com.nandohypesoft.comav.ui.admin.ConfiguracoesAdminScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
+
     LaunchedEffect(mensagemAlerta) {
         mensagemAlerta?.let { msg ->
             snackbarHostState.showSnackbar(msg)

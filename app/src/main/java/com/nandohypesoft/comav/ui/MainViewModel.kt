@@ -43,7 +43,8 @@ enum class TelaDestino {
     LISTA_LETRAS,
     LISTA_CIFRAS,
     CADASTRO_CULTO,
-    ESTATISTICAS
+    ESTATISTICAS,
+    CONFIGURACOES_ADMIN
 }
 
 fun normalizarQuebrasDeLinha(texto: String): String {

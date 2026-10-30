@@ -176,7 +176,7 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
         }
     }
 
-    val equipeCantores = listOf("Pastora Val", "Maisa", "Isabele", "Daniel", "Fernando", "Nanda", "Fabiana")
+    val equipeCantores = listOf("Todos", "Pastora Val", "Maisa", "Isabele", "Daniel", "Fernando", "Nanda", "Fabiana")
 
     val itensForm = remember {
         val list = mutableStateListOf<ItemEscalaFormState>()
@@ -380,7 +380,7 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
             val opcoesDatas = remember {
                 val list = mutableListOf<Pair<String, String>>()
                 val cal = java.util.Calendar.getInstance()
-                for(i in 0..60) {
+                for(i in 0..30) {
                     val dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK)
                     if (dayOfWeek == java.util.Calendar.SUNDAY || dayOfWeek == java.util.Calendar.THURSDAY) {
                         val dateStr = displayDateFormat.format(cal.time)
@@ -596,6 +596,16 @@ fun CadastroCultoScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                         android.widget.Toast.makeText(
                             appContext,
                             "Preencha o nome do ministro, a data e selecione as músicas obrigatórias e seus cantores.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        return@Button
+                    }
+
+                    val cantoresSolistas = itensObrigatorios.map { it.cantor }.filter { it != "Todos" }
+                    if (cantoresSolistas.size != cantoresSolistas.distinct().size) {
+                        android.widget.Toast.makeText(
+                            appContext,
+                            "Não é permitido repetir o mesmo solista nas músicas obrigatórias.",
                             android.widget.Toast.LENGTH_LONG
                         ).show()
                         return@Button
