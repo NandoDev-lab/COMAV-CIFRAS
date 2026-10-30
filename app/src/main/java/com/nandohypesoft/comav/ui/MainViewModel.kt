@@ -128,8 +128,7 @@ class MainViewModel(
     val escalaFonte: StateFlow<Float> = userPreferencesRepository.escalaFonte
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
 
-    val urlGistRemota: StateFlow<String> = userPreferencesRepository.urlGistRemota
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+// urlGistRemota removido
 
     val mostrarEstatisticas: StateFlow<Boolean> = userPreferencesRepository.mostrarEstatisticas
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -371,20 +370,11 @@ class MainViewModel(
     private fun sincronizarGistSilencioso() {
         viewModelScope.launch {
             try {
-                // Tenta sincronizar com Firebase
+                // Sincroniza em background apenas pelo Firebase agora
                 repository.sincronizarComFirebase()
                 recarregar()
             } catch (e: Exception) {
-                // Se falhar, faz fallback para Gist
-                try {
-                    val url = userPreferencesRepository.urlGistRemota.first().trim()
-                    if (url.isNotEmpty()) {
-                        val qtd = repository.sincronizarComGistRemoto(url)
-                        if (qtd > 0) {
-                            recarregar()
-                        }
-                    }
-                } catch (_: Exception) {}
+                // Ignorar erro silencioso em background
             }
         }
     }
@@ -532,35 +522,15 @@ class MainViewModel(
         }
     }
 
-    fun salvarUrlGistRemota(url: String) {
-        viewModelScope.launch {
-            userPreferencesRepository.salvarUrlGistRemota(url)
-        }
-    }
-
-    fun sincronizarComGist() {
-        val url = urlGistRemota.value.trim()
-
+    fun sincronizarComFirebase() {
         viewModelScope.launch {
             try {
                 _mensagemAlerta.value = "Conectando ao Firebase..."
                 val qtdFirebase = repository.sincronizarComFirebase()
                 recarregar()
-                _mensagemAlerta.value = "Sincronização concluída: $qtdFirebase música(s) atualizada(s) do Firebase!"
+                _mensagemAlerta.value = "Sincronização concluída: $qtdFirebase música(s) atualizadas(s) do Firebase!"
             } catch (e: Exception) {
-                // Fallback Gist
-                if (url.isEmpty()) {
-                    _mensagemAlerta.value = "Firebase falhou e a URL do Gist não está configurada."
-                    return@launch
-                }
-                try {
-                    _mensagemAlerta.value = "Firebase falhou. Baixando banco de cifras do Gist..."
-                    val qtd = repository.sincronizarComGistRemoto(url)
-                    recarregar()
-                    _mensagemAlerta.value = "Sincronização concluída: $qtd música(s) atualizada(s) do Gist!"
-                } catch (ex: Exception) {
-                    _mensagemAlerta.value = "Erro na sincronização Firebase/Gist: ${ex.localizedMessage}"
-                }
+                _mensagemAlerta.value = "Erro na sincronização Firebase: ${e.localizedMessage}"
             }
         }
     }

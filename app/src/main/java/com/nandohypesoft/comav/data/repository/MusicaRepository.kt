@@ -227,25 +227,7 @@ class MusicaRepository(
         return entidadesParaSalvar.size
     }
 
-    suspend fun sincronizarComGistRemoto(urlGist: String): Int = withContext(Dispatchers.IO) {
-        val urlLimpa = urlGist.trim()
-        if (urlLimpa.isEmpty()) {
-            throw IllegalArgumentException("A URL do Gist não foi configurada.")
-        }
-
-        val jsonTexto = try {
-            val url = URL(urlLimpa)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.requestMethod = "GET"
-            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Falha ao conectar ao Gist remoto: ${e.localizedMessage}")
-        }
-
-        importarBanco(jsonTexto)
-    }
+// Sincronização via Gist Removida
 
     suspend fun sincronizarComFirebase(): Int = withContext(Dispatchers.IO) {
         val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")

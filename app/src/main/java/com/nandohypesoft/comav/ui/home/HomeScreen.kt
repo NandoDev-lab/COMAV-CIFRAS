@@ -53,7 +53,6 @@ fun HomeScreen(viewModel: MainViewModel) {
     val escalas by viewModel.escalas.collectAsState()
     val mostrarEstatisticas by viewModel.mostrarEstatisticas.collectAsState()
     val consulta by viewModel.consulta.collectAsState()
-    val urlGistRemota by viewModel.urlGistRemota.collectAsState()
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
     val nomeUsuario by viewModel.nomeUsuario.collectAsState()
 
@@ -64,8 +63,6 @@ fun HomeScreen(viewModel: MainViewModel) {
     val podeAcessarAdmin = tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao
     val podeCadastrarCulto = tipoFuncaoEquipe == TipoFuncaoEquipe.MINISTRO_CANTOR || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
     val podeVerCifras = tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO || tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || ehDevExcecao || tipoFuncaoEquipe == TipoFuncaoEquipe.NAO_DEFINIDO
-
-    var inputUrlGist by remember(urlGistRemota) { mutableStateOf(urlGistRemota) }
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
@@ -227,28 +224,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold)
                     }
 
-                    OutlinedTextField(
-                        value = inputUrlGist,
-                        onValueChange = { inputUrlGist = it },
-                        label = { Text("URL Raw do Gist (Fallback)") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            viewModel.salvarUrlGistRemota(inputUrlGist)
-                            viewModel.sincronizarComGist()
-                            mostrarPainelAdmin = false
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Sincronizar Banco Remoto")
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
+// Gist fields removidos
 
                     OutlinedButton(
                         onClick = {

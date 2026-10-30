@@ -19,7 +19,7 @@ class UserPreferencesRepository(private val context: Context) {
     companion object {
         private val TEMA_ESCURO = booleanPreferencesKey("tema_escuro")
         private val ESCALA_FONTE = floatPreferencesKey("escala_fonte")
-        private val URL_GIST_REMOTA = stringPreferencesKey("url_gist_remota")
+    // Substituído removendo referências ao Gist
         private val MOSTRAR_ESTATISTICAS = booleanPreferencesKey("mostrar_estatisticas")
         private val TIPO_FUNCAO_EQUIPE = stringPreferencesKey("tipo_funcao_equipe")
         private val NOME_USUARIO = stringPreferencesKey("nome_usuario")
@@ -46,9 +46,7 @@ class UserPreferencesRepository(private val context: Context) {
         preferences[ESCALA_FONTE] ?: 1.0f
     }
 
-    val urlGistRemota: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[URL_GIST_REMOTA] ?: "https://gist.githubusercontent.com/NandoDev-lab/c1cc5216eebad1cecf47d04adfc4d41b/raw/c5adc1ee2232062f0e5a190b4391fcc60b74e65e/comav_banco.json"
-    }
+// Url gist removida
 
     val mostrarEstatisticas: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[MOSTRAR_ESTATISTICAS] ?: false
@@ -66,11 +64,7 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun salvarUrlGistRemota(url: String) {
-        context.dataStore.edit { preferences ->
-            preferences[URL_GIST_REMOTA] = url.trim()
-        }
-    }
+// salvarUrlGist removida
 
     suspend fun salvarMostrarEstatisticas(ativo: Boolean) {
         context.dataStore.edit { preferences ->
