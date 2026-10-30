@@ -658,94 +658,7 @@ fun HomeScreen(viewModel: MainViewModel) {
             val hojeStr = remember { formatoData.format(Date()) }
             val hojeDate = remember { formatoData.parse(hojeStr) ?: Date() }
 
-            // Card Editável de Preenchimento para o Ministro Escalado
-            val escalaMinistroAtiva = escalas.find { escala ->
-                val ehMinistroEscalado = escala.nomeMinistro.equals(nomeUsuario.trim(), ignoreCase = true) || podeAcessarAdmin
-                if (!ehMinistroEscalado) return@find false
-
-                try {
-                    val cultoDate = formatoData.parse(escala.dataCulto) ?: return@find false
-                    val diffMillis = cultoDate.time - hojeDate.time
-                    val diffDays = diffMillis / (1000 * 60 * 60 * 24)
-                    // Disponível a partir do domingo anterior (até 7 dias antes do culto)
-                    diffDays in 0..7 && escala.statusPreenchimento == "PENDENTE_PREENCHIMENTO"
-                } catch (_: Exception) {
-                    false
-                }
-            }
-
-            if (escalaMinistroAtiva != null) {
-                val dataExibicaoAtiva = try {
-                    val d = formatoData.parse(escalaMinistroAtiva.dataCulto)
-                    if (d != null) formatoDisplay.format(d) else escalaMinistroAtiva.dataCulto
-                } catch (_: Exception) {
-                    escalaMinistroAtiva.dataCulto
-                }
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "🎼 Preenchimento de Louvores do Culto",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
-                            ) {
-                                Text(
-                                    text = "⏳ PENDENTE",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = "Culto: ${escalaMinistroAtiva.diaSemana} — $dataExibicaoAtiva",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-
-                        Text(
-                            text = "Você está escalada(o) como ministra(o) para este culto. Por favor, cadastre e confirme os louvores do repertório até terça-feira!",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                        )
-
-                        Button(
-                            onClick = {
-                                viewModel.abrirEdicaoCulto(escalaMinistroAtiva)
-                                viewModel.navegarPara(TelaDestino.CADASTRO_CULTO)
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("🎵 Cadastrar / Editar Louvores do Culto", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                    }
-                }
-            }
-
-            // 2. Botões Quadrados (Lista de Letras e Lista de Cifras)
+            // 1. Botões Quadrados (Lista de Letras e Lista de Cifras)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -786,6 +699,85 @@ fun HomeScreen(viewModel: MainViewModel) {
                                 Text("🎸", fontSize = 28.sp)
                                 Text("Lista de Cifras", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
+                        }
+                    }
+                }
+            }
+
+            // 2. Card Editável de Preenchimento para o Ministro Escalado (Abaixo das listas de letras e cifras)
+            val escalaMinistroAtiva = escalas.find { escala ->
+                val ehMinistroEscalado = escala.nomeMinistro.equals(nomeUsuario.trim(), ignoreCase = true) || podeAcessarAdmin
+                if (!ehMinistroEscalado) return@find false
+
+                try {
+                    val cultoDate = formatoData.parse(escala.dataCulto) ?: return@find false
+                    val diffMillis = cultoDate.time - hojeDate.time
+                    val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+                    // Disponível a partir do domingo anterior (até 7 dias antes do culto)
+                    diffDays in 0..7 && escala.statusPreenchimento == "PENDENTE_PREENCHIMENTO"
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            if (escalaMinistroAtiva != null) {
+                val dataExibicaoAtiva = try {
+                    val d = formatoData.parse(escalaMinistroAtiva.dataCulto)
+                    if (d != null) formatoDisplay.format(d) else escalaMinistroAtiva.dataCulto
+                } catch (_: Exception) {
+                    escalaMinistroAtiva.dataCulto
+                }
+
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🎼 Preencher Repertório",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.errorContainer
+                            ) {
+                                Text(
+                                    text = "⏳ PENDENTE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                viewModel.abrirEdicaoCulto(escalaMinistroAtiva)
+                                viewModel.navegarPara(TelaDestino.CADASTRO_CULTO)
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Cadastrar Culto — ${escalaMinistroAtiva.diaSemana} ($dataExibicaoAtiva)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
