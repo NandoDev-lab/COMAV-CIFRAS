@@ -31,8 +31,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.nandohypesoft.comav.model.Ensaio
 import com.nandohypesoft.comav.model.EscalaCulto
 import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import com.nandohypesoft.comav.ui.MainViewModel
@@ -42,6 +44,7 @@ import com.nandohypesoft.comav.ui.culto.CalendarioEscalaMusicosDialog
 import com.nandohypesoft.comav.ui.culto.SeletorMusicoSpinner
 import com.nandohypesoft.comav.util.NotificacaoManager
 import com.nandohypesoft.comav.util.SaudacaoUtil
+import com.nandohypesoft.comav.util.YouTubeUtil
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +56,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val temaEscuro by viewModel.temaEscuro.collectAsState()
     val escalas by viewModel.escalas.collectAsState()
+    val ensaios by viewModel.ensaios.collectAsState()
     val mostrarEstatisticas by viewModel.mostrarEstatisticas.collectAsState()
     val consulta by viewModel.consulta.collectAsState()
     val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
@@ -725,17 +729,226 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            val formatoData = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val formatoDisplay = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val hojeStr = formatoData.format(Date())
+            val hojeDate = formatoData.parse(hojeStr) ?: Date()
+
+            // --- SEÇÃO DE ENSAIOS DA EQUIPE ---
+            val ensaiosAtivos = ensaios.filter { it.dataEnsaio >= hojeStr }
+            if (ensaiosAtivos.isNotEmpty()) {
+                Text(
+                    text = "🎸 Ensaio da Equipe",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                ensaiosAtivos.forEach { ensaio ->
+                    val dataExibicao = try {
+                        val d = formatoData.parse(ensaio.dataEnsaio)
+                        if (d != null) formatoDisplay.format(d) else ensaio.dataEnsaio
+                    } catch (_: Exception) {
+                        ensaio.dataEnsaio
+                    }
+
+                    val ehCancelado = ensaio.status == "CANCELADO"
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (ehCancelado) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (ehCancelado) "❌ ENSAIO CANCELADO" else "📅 Próximo Ensaio",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = if (ehCancelado) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "${ensaio.diaSemana} — $dataExibicao",
+                                        fontSize = 13.sp,
+                                        color = if (ehCancelado) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = when (ensaio.status) {
+                                        "CANCELADO" -> MaterialTheme.colorScheme.error
+                                        "CONFIRMADO" -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.secondaryContainer
+                                    }
+                                ) {
+                                    Text(
+                                        text = when (ensaio.status) {
+                                            "CANCELADO" -> "CANCELADO"
+                                            "CONFIRMADO" -> "✓ CONFIRMADO"
+                                            else -> "AGENDADO"
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (ensaio.status) {
+                                            "CANCELADO" -> MaterialTheme.colorScheme.onError
+                                            "CONFIRMADO" -> MaterialTheme.colorScheme.onPrimary
+                                            else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                        },
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            if (ehCancelado) {
+                                Text(
+                                    text = "⚠️ ATENÇÃO: O ensaio previsto para esta data foi CANCELADO pelo líder/administrador.",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+
+                            // Miniaturas dos Vídeos do YouTube
+                            val thumb1 = remember(ensaio.linkYoutube1) { YouTubeUtil.obterUrlThumbnail(ensaio.linkYoutube1) }
+                            val thumb2 = remember(ensaio.linkYoutube2) { YouTubeUtil.obterUrlThumbnail(ensaio.linkYoutube2) }
+
+                            if (thumb1 != null || thumb2 != null) {
+                                Text(
+                                    text = "Louvores para Estudo / Ensaio:",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = if (ehCancelado) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    if (thumb1 != null) {
+                                        Card(
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { YouTubeUtil.abrirVideo(context, ensaio.linkYoutube1) }
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(95.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AsyncImage(
+                                                        model = thumb1,
+                                                        contentDescription = "Vídeo 1",
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                    Text("▶", fontSize = 28.sp, color = androidx.compose.ui.graphics.Color.White)
+                                                }
+                                                Text(
+                                                    text = "Assistir Vídeo 1 ↗",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (thumb2 != null) {
+                                        Card(
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { YouTubeUtil.abrirVideo(context, ensaio.linkYoutube2) }
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(95.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AsyncImage(
+                                                        model = thumb2,
+                                                        contentDescription = "Vídeo 2",
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                    Text("▶", fontSize = 28.sp, color = androidx.compose.ui.graphics.Color.White)
+                                                }
+                                                Text(
+                                                    text = "Assistir Vídeo 2 ↗",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Ações do Administrador
+                            if (podeAcessarAdmin) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (ensaio.status != "CONFIRMADO") {
+                                        TextButton(onClick = { viewModel.confirmarEnsaio(ensaio.id) }) {
+                                            Text(
+                                                text = "✅ Confirmar Ensaio",
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    }
+
+                                    if (!ehCancelado) {
+                                        TextButton(onClick = { viewModel.cancelarEnsaio(ensaio, context) }) {
+                                            Text(
+                                                text = "❌ Cancelar Ensaio",
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.error,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Text(
                 text = "Cultos e Escalas Agendadas",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-
-            val formatoData = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val formatoDisplay = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val hojeStr = formatoData.format(Date())
-            val hojeDate = formatoData.parse(hojeStr) ?: Date()
 
             val escalasAtivas = escalas.filter { it.dataCulto >= hojeStr }
 

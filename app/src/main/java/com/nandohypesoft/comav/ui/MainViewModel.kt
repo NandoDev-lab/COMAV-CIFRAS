@@ -7,15 +7,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.nandohypesoft.comav.data.database.EnsaioDao
 import com.nandohypesoft.comav.data.database.EscalaCultoDao
 import com.nandohypesoft.comav.data.database.EscalaMusicoDataDao
 import com.nandohypesoft.comav.data.importation.DocumentExtractor
 import com.nandohypesoft.comav.data.preferences.UserPreferencesRepository
 import com.nandohypesoft.comav.data.repository.CultoRepository
+import com.nandohypesoft.comav.data.repository.EnsaioRepository
 import com.nandohypesoft.comav.data.repository.MusicaRepository
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.nandohypesoft.comav.model.Ensaio
 import com.nandohypesoft.comav.model.EscalaCulto
 import com.nandohypesoft.comav.model.EscalaMusicoData
 import com.nandohypesoft.comav.model.EstatisticaMusica
@@ -43,6 +46,7 @@ enum class TelaDestino {
     LISTA_LETRAS,
     LISTA_CIFRAS,
     CADASTRO_CULTO,
+    CADASTRO_ENSAIO,
     ESTATISTICAS,
     CONFIGURACOES_ADMIN
 }
@@ -79,16 +83,21 @@ class MainViewModel(
     private val repository: MusicaRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val escalaCultoDao: EscalaCultoDao? = null,
-    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null
+    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null,
+    private val ensaioDao: EnsaioDao? = null
 ) : ViewModel() {
 
     private val cultoRepository = CultoRepository(escalaCultoDao, escalaMusicoDataDao)
+    private val ensaioRepository = EnsaioRepository(ensaioDao)
 
     private val _telaAtual = MutableStateFlow(TelaDestino.HOME)
     val telaAtual: StateFlow<TelaDestino> = _telaAtual.asStateFlow()
 
     private val _escalas = MutableStateFlow<List<EscalaCulto>>(emptyList())
     val escalas: StateFlow<List<EscalaCulto>> = _escalas.asStateFlow()
+
+    private val _ensaios = MutableStateFlow<List<Ensaio>>(emptyList())
+    val ensaios: StateFlow<List<Ensaio>> = _ensaios.asStateFlow()
 
     private val _escalaEmEdicao = MutableStateFlow<EscalaCulto?>(null)
     val escalaEmEdicao: StateFlow<EscalaCulto?> = _escalaEmEdicao.asStateFlow()
@@ -265,7 +274,60 @@ class MainViewModel(
         sincronizarGistSilencioso()
         carregarEscalasCulto()
         carregarEscalasMusicosData()
+        carregarEnsaios()
         carregarTodasMusicas()
+    }
+
+    fun carregarEnsaios() {
+        viewModelScope.launch {
+            try {
+                _ensaios.value = ensaioRepository.listarEnsaios()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun salvarEnsaio(ensaio: Ensaio, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                ensaioRepository.salvarEnsaio(ensaio)
+                carregarEnsaios()
+                _mensagemAlerta.value = "Ensaio cadastrado com sucesso!"
+                onSuccess()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao salvar ensaio: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun confirmarEnsaio(id: String) {
+        viewModelScope.launch {
+            try {
+                ensaioRepository.atualizarStatusEnsaio(id, "CONFIRMADO")
+                carregarEnsaios()
+                _mensagemAlerta.value = "Ensaio CONFIRMADO com sucesso!"
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao confirmar ensaio: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun cancelarEnsaio(ensaio: Ensaio, context: Context) {
+        viewModelScope.launch {
+            try {
+                ensaioRepository.atualizarStatusEnsaio(ensaio.id, "CANCELADO")
+                carregarEnsaios()
+
+                NotificacaoManager.notificarEnsaioCancelado(
+                    context = context,
+                    dataEnsaioStr = ensaio.dataEnsaio,
+                    diaSemanaStr = ensaio.diaSemana
+                )
+
+                _mensagemAlerta.value = "Ensaio CANCELADO! Todos os membros foram notificados."
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao cancelar ensaio: ${e.localizedMessage}"
+            }
+        }
     }
 
     fun carregarEscalasMusicosData() {
@@ -566,10 +628,11 @@ class MainViewModelFactory(
     private val repository: MusicaRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val escalaCultoDao: EscalaCultoDao? = null,
-    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null
+    private val escalaMusicoDataDao: EscalaMusicoDataDao? = null,
+    private val ensaioDao: EnsaioDao? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return MainViewModel(repository, userPreferencesRepository, escalaCultoDao, escalaMusicoDataDao) as T
+        return MainViewModel(repository, userPreferencesRepository, escalaCultoDao, escalaMusicoDataDao, ensaioDao) as T
     }
 }

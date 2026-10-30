@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
             repository,
             userPreferencesRepository,
             database.escalaCultoDao(),
-            database.escalaMusicoDataDao()
+            database.escalaMusicoDataDao(),
+            database.ensaioDao()
         )
     }
 

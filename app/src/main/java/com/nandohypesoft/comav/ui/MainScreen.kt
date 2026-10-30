@@ -130,6 +130,11 @@ fun MainScreen(viewModel: MainViewModel) {
         return
     }
 
+    if (telaAtual == TelaDestino.CADASTRO_ENSAIO) {
+        com.nandohypesoft.comav.ui.ensaio.CadastroEnsaioScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
+        return
+    }
+
     if (telaAtual == TelaDestino.ESTATISTICAS) {
         EstatisticasScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.HOME) })
         return

@@ -90,6 +90,15 @@ object NotificacaoManager {
         } catch (_: Exception) {}
     }
 
+    fun notificarEnsaioCancelado(context: Context, dataEnsaioStr: String, diaSemanaStr: String) {
+        dispararNotificacaoLocal(
+            context = context,
+            titulo = "❌ Ensaio Cancelado!",
+            mensagem = "O ensaio previsto para $diaSemanaStr ($dataEnsaioStr) foi CANCELADO pelo líder/administrador.",
+            notificationId = 2001
+        )
+    }
+
     fun verificarEAgendarAlertas(
         context: Context,
         funcaoUsuario: TipoFuncaoEquipe,

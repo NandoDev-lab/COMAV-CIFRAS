@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [MusicaEntity::class, EscalaCultoEntity::class, EscalaMusicoDataEntity::class],
-    version = 5,
+    entities = [MusicaEntity::class, EscalaCultoEntity::class, EscalaMusicoDataEntity::class, EnsaioEntity::class],
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -15,6 +15,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun musicaDao(): MusicaDao
     abstract fun escalaCultoDao(): EscalaCultoDao
     abstract fun escalaMusicoDataDao(): EscalaMusicoDataDao
+    abstract fun ensaioDao(): EnsaioDao
 
     companion object {
         @Volatile

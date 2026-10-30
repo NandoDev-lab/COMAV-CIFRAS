@@ -13,10 +13,10 @@ android {
 
     defaultConfig {
         applicationId = "com.nandohypesoft.comav"
-        minSdk = 34
-        targetSdk = 37
-        versionCode = 2
-        versionName = "1.1"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,6 +73,9 @@ dependencies {
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
     implementation("com.google.firebase:firebase-firestore")
+
+    // Coil Image Loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // JSON & PDF & QR Code & CameraX
     implementation(libs.gson)

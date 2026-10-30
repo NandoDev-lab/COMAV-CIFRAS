@@ -318,6 +318,17 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
             Button(
                 onClick = {
+                    viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CADASTRO_ENSAIO)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("🎸 Cadastrar Ensaio da Equipe", color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+                onClick = {
                     mostrarCalendarioMusicos = true
                 },
                 modifier = Modifier.fillMaxWidth(),
