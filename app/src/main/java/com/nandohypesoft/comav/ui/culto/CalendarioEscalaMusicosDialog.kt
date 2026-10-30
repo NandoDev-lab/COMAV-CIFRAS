@@ -62,9 +62,12 @@ fun CalendarioEscalaMusicosDialog(
         escalasMusicosMap[dataIsoSelecionada] ?: EscalaMusicoData(dataIso = dataIsoSelecionada)
     }
 
+    var ministroEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.nomeMinistro) }
+    var vocaisEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.vocais) }
     var tecladistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.tecladista) }
     var violonistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.violonista) }
     var bateristaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baterista) }
+    var baixistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baixista) }
 
     val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
     val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
@@ -168,9 +171,12 @@ fun CalendarioEscalaMusicosDialog(
                                     val ehQuintaOuDomingo = (col == 0 || col == 4)
                                     val dataIsoLoop = String.format(Locale.US, "%04d-%02d-%02d", ano, mesIndex + 1, diaNumero)
                                     val temMusicoCadastrado = escalasMusicosMap.containsKey(dataIsoLoop) &&
-                                            (escalasMusicosMap[dataIsoLoop]?.tecladista?.isNotBlank() == true ||
+                                            (escalasMusicosMap[dataIsoLoop]?.nomeMinistro?.isNotBlank() == true ||
+                                             escalasMusicosMap[dataIsoLoop]?.vocais?.isNotBlank() == true ||
+                                             escalasMusicosMap[dataIsoLoop]?.tecladista?.isNotBlank() == true ||
                                              escalasMusicosMap[dataIsoLoop]?.violonista?.isNotBlank() == true ||
-                                             escalasMusicosMap[dataIsoLoop]?.baterista?.isNotBlank() == true)
+                                             escalasMusicosMap[dataIsoLoop]?.baterista?.isNotBlank() == true ||
+                                             escalasMusicosMap[dataIsoLoop]?.baixista?.isNotBlank() == true)
 
                                     val ehSelecionado = diaSelecionado == diaNumero
 
@@ -258,6 +264,24 @@ fun CalendarioEscalaMusicosDialog(
                         color = MaterialTheme.colorScheme.primary
                     )
 
+                    OutlinedTextField(
+                        value = ministroEdicao,
+                        onValueChange = { ministroEdicao = it.uppercase() },
+                        label = { Text("🎤 Ministro / Dirigente (Ex: NANDA, FERNANDO)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = vocaisEdicao,
+                        onValueChange = { vocaisEdicao = it.uppercase() },
+                        label = { Text("🗣️ Vocais (Ex: FABIANA, VAL)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     SeletorMusicoSpinner(
                         label = "Teclado",
                         icone = "🎹",
@@ -282,15 +306,46 @@ fun CalendarioEscalaMusicosDialog(
                         onMusicoSelecionado = { bateristaEdicao = it }
                     )
 
+                    OutlinedTextField(
+                        value = baixistaEdicao,
+                        onValueChange = { baixistaEdicao = it.uppercase() },
+                        label = { Text("🎸 Contra-Baixo (Ex: LUCAS)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     Button(
                         onClick = {
-                            val novaEscala = EscalaMusicoData(
+                            val novaEscalaMusicos = EscalaMusicoData(
                                 dataIso = dataIsoSelecionada,
+                                nomeMinistro = ministroEdicao.trim().uppercase(),
+                                vocais = vocaisEdicao.trim().uppercase(),
                                 tecladista = tecladistaEdicao.trim(),
                                 violonista = violonistaEdicao.trim(),
-                                baterista = bateristaEdicao.trim()
+                                baterista = bateristaEdicao.trim(),
+                                baixista = baixistaEdicao.trim().uppercase()
                             )
-                            viewModel.salvarEscalaMusicoData(novaEscala)
+                            viewModel.salvarEscalaMusicoData(novaEscalaMusicos)
+
+                            // Se o ministro for informado, criar/sincronizar também a EscalaCulto geral
+                            if (ministroEdicao.isNotBlank()) {
+                                val escalaExistente = viewModel.escalas.value.find { it.dataCulto == dataIsoSelecionada }
+                                val escalaGeral = com.nandohypesoft.comav.model.EscalaCulto(
+                                    id = escalaExistente?.id ?: "",
+                                    nomeMinistro = ministroEdicao.trim().uppercase(),
+                                    dataCulto = dataIsoSelecionada,
+                                    diaSemana = diaSemanaNome,
+                                    vocais = vocaisEdicao.trim().uppercase(),
+                                    tecladista = tecladistaEdicao.trim(),
+                                    violonista = violonistaEdicao.trim(),
+                                    baterista = bateristaEdicao.trim(),
+                                    baixista = baixistaEdicao.trim().uppercase(),
+                                    itens = escalaExistente?.itens ?: emptyList(),
+                                    statusPreenchimento = escalaExistente?.statusPreenchimento ?: "PENDENTE_PREENCHIMENTO"
+                                )
+                                viewModel.salvarEscalaCulto(escalaGeral) {}
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
