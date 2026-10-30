@@ -355,7 +355,12 @@ class MusicaRepository(
         }
 
         if (sucessoCount == 0 && ultimoErro != null) {
-            throw IllegalArgumentException("Falha ao enviar para o Firebase: ${ultimoErro.localizedMessage}")
+            val msg = if (ultimoErro.localizedMessage?.contains("PERMISSION_DENIED") == true) {
+                "Permissão negada no Firebase (PERMISSION_DENIED). Altere as Regras de Segurança no Console do Firebase para permitir leitura/gravação."
+            } else {
+                ultimoErro.localizedMessage ?: "Erro de conexão com o Firebase."
+            }
+            throw IllegalArgumentException(msg)
         }
 
         sucessoCount
