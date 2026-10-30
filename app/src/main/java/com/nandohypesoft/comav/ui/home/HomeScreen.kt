@@ -1015,7 +1015,25 @@ fun HomeScreen(viewModel: MainViewModel) {
                 color = MaterialTheme.colorScheme.primary
             )
 
-            val escalasAtivas = escalas.filter { it.dataCulto >= hojeStr }
+            val escalasAtivas = escalas.filter { escala ->
+                val estaPreenchido = escala.statusPreenchimento == "PREENCHIDO" || escala.itens.isNotEmpty()
+                if (!estaPreenchido) return@filter false
+
+                val nomeLimpo = nomeUsuario.trim().uppercase()
+                val ehMinistro = escala.nomeMinistro.trim().uppercase() == nomeLimpo
+                val ehVocal = escala.vocal1.trim().uppercase() == nomeLimpo ||
+                              escala.vocal2.trim().uppercase() == nomeLimpo ||
+                              escala.vocal3.trim().uppercase() == nomeLimpo ||
+                              (escala.vocais.isNotBlank() && escala.vocais.uppercase().contains(nomeLimpo))
+                val ehMusico = escala.tecladista.trim().uppercase() == nomeLimpo ||
+                               escala.violonista.trim().uppercase() == nomeLimpo ||
+                               escala.baterista.trim().uppercase() == nomeLimpo ||
+                               escala.baixista.trim().uppercase() == nomeLimpo
+
+                val ehMembroEnvolvido = ehMinistro || ehVocal || ehMusico || podeAcessarAdmin
+
+                escala.dataCulto >= hojeStr && ehMembroEnvolvido
+            }
 
             if (escalasAtivas.isEmpty()) {
                 Card(
