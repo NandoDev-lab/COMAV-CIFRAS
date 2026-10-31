@@ -119,6 +119,15 @@ fun MainScreen(viewModel: MainViewModel) {
     var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val telaAtual by viewModel.telaAtual.collectAsState()
+    val versaoAppRemota by viewModel.versaoAppRemota.collectAsState()
+
+    if (versaoAppRemota != null) {
+        com.nandohypesoft.comav.ui.components.DialogAtualizacaoApp(
+            versaoApp = versaoAppRemota!!,
+            viewModel = viewModel,
+            onDismiss = { viewModel.dispensarAlertaAtualizacaoApp() }
+        )
+    }
 
     if (telaAtual == TelaDestino.HOME) {
         HomeScreen(viewModel = viewModel)
@@ -153,6 +162,7 @@ fun MainScreen(viewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         viewModel.iniciarMonitoramentoSessao(context)
         viewModel.verificarEAtualizarBancoVersaoRemota()
+        viewModel.verificarAtualizacaoAppRemoto()
         viewModel.mensagemAlerta.collect { msg ->
             if (msg != null) {
                 snackbarHostState.showSnackbar(msg)

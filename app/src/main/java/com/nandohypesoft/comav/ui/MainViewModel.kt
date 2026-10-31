@@ -160,6 +160,54 @@ class MainViewModel(
     val versaoBancoLocal: StateFlow<Long> = userPreferencesRepository.versaoBancoLocal
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1L)
 
+    private val _versaoAppRemota = MutableStateFlow<com.nandohypesoft.comav.model.VersaoApp?>(null)
+    val versaoAppRemota: StateFlow<com.nandohypesoft.comav.model.VersaoApp?> = _versaoAppRemota.asStateFlow()
+
+    fun verificarAtualizacaoAppRemoto(versionCodeAtual: Long = 1L) {
+        viewModelScope.launch {
+            try {
+                val novaVersao = com.nandohypesoft.comav.util.UpdateManager.verificarNovaVersaoRemota(versionCodeAtual)
+                _versaoAppRemota.value = novaVersao
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun dispensarAlertaAtualizacaoApp() {
+        _versaoAppRemota.value = null
+    }
+
+    fun baixarEInstalarAtualizacaoApp(
+        context: Context,
+        urlApk: String,
+        onProgresso: (porcentagem: Int) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        viewModelScope.launch {
+            com.nandohypesoft.comav.util.UpdateManager.baixarEInstalarApk(
+                context = context,
+                urlApk = urlApk,
+                onProgresso = onProgresso,
+                onSucesso = {
+                    _versaoAppRemota.value = null
+                },
+                onError = onError
+            )
+        }
+    }
+
+    fun publicarNovaVersaoApp(versao: com.nandohypesoft.comav.model.VersaoApp, onConcluido: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                _mensagemAlerta.value = "Publicando nova versão do APK no Firebase..."
+                com.nandohypesoft.comav.util.UpdateManager.publicarNovaVersaoApp(versao)
+                _mensagemAlerta.value = "✅ Nova versão (${versao.versionName}) publicada com sucesso para toda a equipe!"
+                onConcluido()
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao publicar versão: ${e.localizedMessage}"
+            }
+        }
+    }
+
     val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
 
