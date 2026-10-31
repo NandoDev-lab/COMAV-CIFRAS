@@ -618,12 +618,12 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 val versaoAtual = userPreferencesRepository.versaoBancoLocal.first()
-                val backupObj = repository.exportarBanco()
-                val jsonBase = com.google.gson.Gson().toJson(backupObj)
+                val qtdMusicas = _musicas.value.size
 
-                val jsonObject = org.json.JSONObject(jsonBase).apply {
+                val jsonObject = org.json.JSONObject().apply {
                     put("comav_backup", true)
                     put("versao_banco", versaoAtual)
+                    put("qtdMusicas", qtdMusicas)
                     put("gerado_em", SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale.getDefault()).format(Date()))
                 }
                 onPronto(jsonObject.toString(), versaoAtual)

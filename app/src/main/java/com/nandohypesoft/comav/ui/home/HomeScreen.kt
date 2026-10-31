@@ -73,6 +73,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
     var mostrarDialogSimulacaoNotificacoes by remember { mutableStateOf(false) }
     var mostrarDialogoCompartilharQr by remember { mutableStateOf(false) }
+    var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     var mostrarGerenciadorCultos by remember { mutableStateOf(false) }
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
     var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
@@ -473,11 +474,11 @@ fun HomeScreen(viewModel: MainViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        launcherExportarBackup.launch("comav_backup_v${versaoBancoLocal}.json")
                         mostrarDialogoCompartilharQr = false
+                        mostrarLeitorQrCode = true
                     }
                 ) {
-                    Text("Exportar Arquivo")
+                    Text("📷 Importar Banco (Escanear QR)")
                 }
             },
             dismissButton = {
@@ -485,6 +486,16 @@ fun HomeScreen(viewModel: MainViewModel) {
                     Text("Fechar")
                 }
             }
+        )
+    }
+
+    if (mostrarLeitorQrCode) {
+        com.nandohypesoft.comav.ui.QrCodeScannerDialog(
+            onScanResult = { scannedResult ->
+                mostrarLeitorQrCode = false
+                viewModel.importarBackupTexto(scannedResult)
+            },
+            onDismiss = { mostrarLeitorQrCode = false }
         )
     }
 
