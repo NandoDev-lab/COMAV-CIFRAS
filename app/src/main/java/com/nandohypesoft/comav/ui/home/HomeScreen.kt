@@ -896,6 +896,128 @@ fun HomeScreen(viewModel: MainViewModel) {
                 }
             }
 
+            // --- ATALHOS RÁPIDOS DO REPERTÓRIO DO CULTO ---
+            val cultoAtalhos = escalas.find { escala ->
+                val estaPreenchido = escala.statusPreenchimento == "PREENCHIDO" || escala.itens.isNotEmpty()
+                if (!estaPreenchido) return@find false
+
+                try {
+                    val cultoDate = formatoData.parse(escala.dataCulto) ?: return@find false
+                    val diffMillis = hojeDate.time - cultoDate.time
+                    val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+                    // Ativo desde o agendamento até 1 dia após o culto (diffDays <= 1)
+                    diffDays <= 1 && hojeDate.time >= cultoDate.time - (7 * 24 * 60 * 60 * 1000L)
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            if (cultoAtalhos != null && cultoAtalhos.itens.isNotEmpty()) {
+                val dataExibicaoAtalho = try {
+                    val d = formatoData.parse(cultoAtalhos.dataCulto)
+                    if (d != null) formatoDisplay.format(d) else cultoAtalhos.dataCulto
+                } catch (_: Exception) {
+                    cultoAtalhos.dataCulto
+                }
+
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🚀 Atalhos do Culto (${cultoAtalhos.diaSemana} — $dataExibicaoAtalho)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = if (tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO) "🎸 Cifras" else "🎤 Letras",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Lista de botões de atalho na ordem cadastrada pelo ministro
+                        cultoAtalhos.itens.forEachIndexed { idx, item ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.atualizarConsulta(item.tituloMusica)
+                                        if (tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO) {
+                                            viewModel.navegarPara(TelaDestino.LISTA_CIFRAS)
+                                        } else {
+                                            viewModel.navegarPara(TelaDestino.LISTA_LETRAS)
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "${idx + 1}.",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (item.identificadorMusica > 0) {
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = "Nº ${item.identificadorMusica}",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "${item.tituloMusica} ${if (item.cantor.isNotBlank()) "— ${item.cantor}" else ""}",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = "Abrir ↗",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // 3. Estatísticas de Uso (Oculto até ser habilitado no Painel Administrativo)
             if (mostrarEstatisticas) {
                 Button(

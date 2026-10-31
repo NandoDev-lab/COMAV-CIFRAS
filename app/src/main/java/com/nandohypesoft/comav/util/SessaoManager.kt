@@ -1,7 +1,6 @@
 package com.nandohypesoft.comav.util
 
 import android.content.Context
-import android.os.Build
 import android.provider.Settings
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -57,10 +56,13 @@ object SessaoManager {
             val horaStr = formatoHora.format(agora)
             val dataIsoStr = formatoDataIso.format(agora)
 
+            val nomeFinal = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
+            val funcaoFinal = if (tipoFuncao == TipoFuncaoEquipe.NAO_DEFINIDO) TipoFuncaoEquipe.ADMIN_LIDER.titulo else tipoFuncao.titulo
+
             val dadosSessao = mapOf(
                 "dispositivoId" to androidId,
-                "nomeUsuario" to nomeUsuario.trim().uppercase(),
-                "funcao" to tipoFuncao.titulo,
+                "nomeUsuario" to nomeFinal,
+                "funcao" to funcaoFinal,
                 "status" to "ONLINE",
                 "horarioInicio" to horaStr,
                 "inicioEm" to System.currentTimeMillis(),
@@ -70,14 +72,14 @@ object SessaoManager {
             // Registrar a sessão em tempo real
             firestore.collection("sessoes_ativas").document(androidId).set(dadosSessao)
 
-            // Se for fora do horário comercial (antes das 07:30 ou após as 21:00), registrar histórico
-            if (!ehHorarioComercial() && nomeUsuario.isNotBlank()) {
+            // Se for fora do horário comercial, registrar no histórico
+            if (!ehHorarioComercial() && nomeFinal.isNotBlank()) {
                 val idHistorico = "${androidId}_${System.currentTimeMillis()}"
                 val dadosHistorico = mapOf(
                     "id" to idHistorico,
                     "dispositivoId" to androidId,
-                    "nomeUsuario" to nomeUsuario.trim().uppercase(),
-                    "funcao" to tipoFuncao.titulo,
+                    "nomeUsuario" to nomeFinal,
+                    "funcao" to funcaoFinal,
                     "horario" to horaStr,
                     "dataIso" to dataIsoStr,
                     "timestamp" to System.currentTimeMillis(),
@@ -103,7 +105,7 @@ object SessaoManager {
     }
 
     fun escutarAtividadesSessaoFirebase(context: Context, tipoFuncao: TipoFuncaoEquipe, nomeUsuario: String) {
-        val ehLiderOuDev = (tipoFuncao == TipoFuncaoEquipe.ADMIN_LIDER || nomeUsuario.trim().uppercase().contains("FERNANDO"))
+        val ehLiderOuDev = (tipoFuncao == TipoFuncaoEquipe.ADMIN_LIDER || EquipeConfig.ehLider(nomeUsuario))
         if (!ehLiderOuDev) return
 
         val tempoInicioEscuta = System.currentTimeMillis() - 5000L
@@ -112,7 +114,6 @@ object SessaoManager {
             val myAndroidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
             val firestore = FirebaseFirestore.getInstance()
 
-            // Escutar sessões ativas (online/offline) em tempo real
             listenerSessoes?.remove()
             listenerSessoes = firestore.collection("sessoes_ativas")
                 .addSnapshotListener { snapshot, error ->
@@ -147,15 +148,16 @@ object SessaoManager {
                         }
                     }
 
-                    // Garantir que o próprio admin logado apareça na lista se o snapshot remoto atrasar
+                    // Se a lista do snapshot não trouxer o próprio admin por atraso de sincronização, adiciona localmente
                     if (myAndroidId.isNotBlank() && listaMembros.none { it.dispositivoId == myAndroidId }) {
+                        val nomeAdminFinal = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
                         listaMembros.add(
                             MembroSessao(
                                 dispositivoId = myAndroidId,
-                                nomeUsuario = "$nomeUsuario (Você)",
-                                funcao = tipoFuncao.titulo,
+                                nomeUsuario = "$nomeAdminFinal (Você)",
+                                funcao = if (tipoFuncao != TipoFuncaoEquipe.NAO_DEFINIDO) tipoFuncao.titulo else "Líder / Desenvolvedor",
                                 status = "ONLINE",
-                                horarioInicio = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()),
+                                horarioInicio = sdfHora.format(Date()),
                                 inicioEm = System.currentTimeMillis()
                             )
                         )
@@ -163,7 +165,7 @@ object SessaoManager {
 
                     _membrosConectados.value = listaMembros
 
-                    // Processar alterações em tempo real para notificações individuais com horários exatos
+                    // Processar notificações em tempo real
                     for (change in snapshot.documentChanges) {
                         if (change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) continue
 

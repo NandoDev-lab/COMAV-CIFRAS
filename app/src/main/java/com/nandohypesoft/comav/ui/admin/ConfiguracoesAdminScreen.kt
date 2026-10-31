@@ -422,22 +422,26 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 onClick = {
                     viewModel.sincronizarComFirebase()
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("🔄 Sincronizar Banco Remoto", fontWeight = FontWeight.Bold)
+                Text("🔄 Sincronizar Banco Remoto", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            OutlinedButton(
-                onClick = {
-                    viewModel.migrarParaFirebase()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text("☁️ Subir Base Local para Nuvem (Migração)")
+            if (com.nandohypesoft.comav.util.EquipeConfig.ehDesenvolvedor(nomeUsuario)) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.migrarParaFirebase()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("☁️ Subir Base Local para Nuvem (Dev Exclusivo)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
             }
 
             HorizontalDivider()
