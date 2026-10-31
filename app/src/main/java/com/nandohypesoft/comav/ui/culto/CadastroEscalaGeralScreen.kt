@@ -40,11 +40,11 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     var bateristaInput by remember { mutableStateOf("") }
     var baixistaInput by remember { mutableStateOf("") }
 
-    val opcoesVocais = listOf("Selecione...", "Val", "Fabiana", "Isabela", "Isabele", "Maisa", "Nanda", "Outro...")
-    val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
-    val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
-    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
-    val opcoesBaixo = listOf("Selecione...", "Lucas", "Outro...")
+    val opcoesMinistros = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_MINISTROS_SPINNER
+    val opcoesVocais = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_VOCAIS_SPINNER
+    val opcoesTeclado = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_TECLADO_SPINNER
+    val opcoesViolao = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_VIOLAO_SPINNER
+    val opcoesBateria = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_BATERIA_SPINNER
 
     val diaSemanaCalculado = remember(dataCultoBrInput) {
         try {
@@ -129,13 +129,12 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
 
-            OutlinedTextField(
-                value = ministroInput,
-                onValueChange = { ministroInput = it.uppercase() },
-                label = { Text("Nome do Ministro (Ex: NANDA, FERNANDO, VAL)") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorMusicoSpinner(
+                label = "Ministro / Dirigente Escalado",
+                icone = "👑",
+                musicoSelecionado = ministroInput,
+                opcoesMusicos = opcoesMinistros,
+                onMusicoSelecionado = { ministroInput = it }
             )
 
             HorizontalDivider()
@@ -202,14 +201,6 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 musicoSelecionado = bateristaInput,
                 opcoesMusicos = opcoesBateria,
                 onMusicoSelecionado = { bateristaInput = it }
-            )
-
-            SeletorMusicoSpinner(
-                label = "Contra-Baixo",
-                icone = "🎸",
-                musicoSelecionado = baixistaInput,
-                opcoesMusicos = opcoesBaixo,
-                onMusicoSelecionado = { baixistaInput = it }
             )
 
             Spacer(modifier = Modifier.height(10.dp))

@@ -71,11 +71,11 @@ fun CalendarioEscalaMusicosDialog(
     var bateristaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baterista) }
     var baixistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baixista) }
 
-    val opcoesVocais = listOf("Selecione...", "Val", "Fabiana", "Isabela", "Isabele", "Maisa", "Nanda", "Outro...")
-    val opcoesTeclado = listOf("Selecione...", "Fernando", "Agnaldo", "Outro...")
-    val opcoesViolao = listOf("Selecione...", "Fernando", "Victor", "Daniel", "Outro...")
-    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Outro...")
-    val opcoesBaixo = listOf("Selecione...", "Lucas", "Outro...")
+    val opcoesMinistros = listOf("Selecione...", "Valdinéia", "Fernanda", "Maísa", "Isabele", "Fabiana", "Daniel", "Fernando", "Outro...")
+    val opcoesVocais = listOf("Selecione...", "Valdinéia", "Fernanda", "Maísa", "Isabele", "Fabiana", "Daniel", "Fernando", "Outro...")
+    val opcoesTeclado = listOf("Selecione...", "Agnaldo", "Daniel", "Fernando", "Outro...")
+    val opcoesViolao = listOf("Selecione...", "Daniel", "Fernando", "Victor", "Outro...")
+    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Fernando", "Outro...")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -268,13 +268,12 @@ fun CalendarioEscalaMusicosDialog(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    OutlinedTextField(
-                        value = ministroEdicao,
-                        onValueChange = { ministroEdicao = it.uppercase() },
-                        label = { Text("🎤 Ministro / Dirigente (Ex: NANDA, FERNANDO)") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    SeletorMusicoSpinner(
+                        label = "Ministro / Dirigente",
+                        icone = "👑",
+                        musicoSelecionado = ministroEdicao,
+                        opcoesMusicos = opcoesMinistros,
+                        onMusicoSelecionado = { ministroEdicao = it }
                     )
 
                     SeletorMusicoSpinner(
@@ -323,14 +322,6 @@ fun CalendarioEscalaMusicosDialog(
                         musicoSelecionado = bateristaEdicao,
                         opcoesMusicos = opcoesBateria,
                         onMusicoSelecionado = { bateristaEdicao = it }
-                    )
-
-                    SeletorMusicoSpinner(
-                        label = "Contra-Baixo",
-                        icone = "🎸",
-                        musicoSelecionado = baixistaEdicao,
-                        opcoesMusicos = opcoesBaixo,
-                        onMusicoSelecionado = { baixistaEdicao = it }
                     )
 
                     Button(
