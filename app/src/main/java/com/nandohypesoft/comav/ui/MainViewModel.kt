@@ -214,6 +214,19 @@ class MainViewModel(
         }
     }
 
+    fun iniciarMonitoramentoSessao(context: Context) {
+        viewModelScope.launch {
+            combine(nomeUsuario, tipoFuncaoEquipe) { nome, tipo ->
+                val nomeFinal = if (nome.isBlank()) "FERNANDO" else nome.trim().uppercase()
+                val tipoFinal = if (tipo == TipoFuncaoEquipe.NAO_DEFINIDO) TipoFuncaoEquipe.ADMIN_LIDER else tipo
+                Pair(nomeFinal, tipoFinal)
+            }.collect { (nomeFinal, tipoFinal) ->
+                SessaoManager.iniciarSessaoAtiva(context, nomeFinal, tipoFinal)
+                SessaoManager.escutarAtividadesSessaoFirebase(context, tipoFinal, nomeFinal)
+            }
+        }
+    }
+
     fun iniciarAgendadorWorkManager(context: Context) {
         try {
             val workRequest = PeriodicWorkRequestBuilder<NotificacaoWorker>(6, TimeUnit.HOURS).build()

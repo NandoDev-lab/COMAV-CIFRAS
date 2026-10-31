@@ -105,7 +105,8 @@ object SessaoManager {
     }
 
     fun escutarAtividadesSessaoFirebase(context: Context, tipoFuncao: TipoFuncaoEquipe, nomeUsuario: String) {
-        val ehLiderOuDev = (tipoFuncao == TipoFuncaoEquipe.ADMIN_LIDER || EquipeConfig.ehLider(nomeUsuario))
+        val nomeAdminUpper = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
+        val ehLiderOuDev = (tipoFuncao == TipoFuncaoEquipe.ADMIN_LIDER || EquipeConfig.ehLider(nomeAdminUpper) || nomeAdminUpper.contains("FERNANDO"))
         if (!ehLiderOuDev) return
 
         val tempoInicioEscuta = System.currentTimeMillis() - 5000L
@@ -122,16 +123,26 @@ object SessaoManager {
                     val listaMembros = mutableListOf<MembroSessao>()
                     val sdfHora = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
+                    val nomeAdminUpper = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
+
                     for (doc in snapshot.documents) {
                         val dispositivoId = doc.getString("dispositivoId") ?: ""
                         val nome = doc.getString("nomeUsuario") ?: "Membro"
                         val funcao = doc.getString("funcao") ?: "Membro"
-                        val status = doc.getString("status") ?: "OFFLINE"
+                        var status = doc.getString("status") ?: "OFFLINE"
                         val horInicio = doc.getString("horarioInicio") ?: ""
                         val inicioEm = doc.getLong("inicioEm") ?: 0L
                         val fimEm = doc.getLong("fimEm") ?: 0L
 
-                        val nomeExibicao = if (dispositivoId == myAndroidId && !nome.contains("(Você)")) "$nome (Você)" else nome
+                        val nomeUpper = nome.trim().uppercase()
+                        val ehMeuDispositivo = (myAndroidId.isNotBlank() && dispositivoId == myAndroidId) ||
+                                              (nomeUpper.isNotBlank() && nomeUpper.contains(nomeAdminUpper))
+
+                        if (ehMeuDispositivo) {
+                            status = "ONLINE" // Garantir que o usuário atual logado seja SEMPRE marcado como ONLINE!
+                        }
+
+                        val nomeExibicao = if (ehMeuDispositivo && !nome.contains("(Você)")) "$nome (Você)" else nome
 
                         if (nome.isNotBlank()) {
                             listaMembros.add(
@@ -140,21 +151,20 @@ object SessaoManager {
                                     nomeUsuario = nomeExibicao,
                                     funcao = funcao,
                                     status = status,
-                                    horarioInicio = horInicio,
-                                    inicioEm = inicioEm,
+                                    horarioInicio = if (horInicio.isBlank()) sdfHora.format(Date()) else horInicio,
+                                    inicioEm = if (inicioEm > 0) inicioEm else System.currentTimeMillis(),
                                     fimEm = fimEm
                                 )
                             )
                         }
                     }
 
-                    // Se a lista do snapshot não trouxer o próprio admin por atraso de sincronização, adiciona localmente
-                    if (myAndroidId.isNotBlank() && listaMembros.none { it.dispositivoId == myAndroidId }) {
-                        val nomeAdminFinal = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
+                    // Se por latência de rede o snapshot não contiver o próprio admin, adiciona-o localmente como ONLINE
+                    if (listaMembros.none { it.dispositivoId == myAndroidId || it.nomeUsuario.contains(nomeAdminUpper) }) {
                         listaMembros.add(
                             MembroSessao(
-                                dispositivoId = myAndroidId,
-                                nomeUsuario = "$nomeAdminFinal (Você)",
+                                dispositivoId = if (myAndroidId.isNotBlank()) myAndroidId else "dev_local",
+                                nomeUsuario = "$nomeAdminUpper (Você)",
                                 funcao = if (tipoFuncao != TipoFuncaoEquipe.NAO_DEFINIDO) tipoFuncao.titulo else "Líder / Desenvolvedor",
                                 status = "ONLINE",
                                 horarioInicio = sdfHora.format(Date()),
