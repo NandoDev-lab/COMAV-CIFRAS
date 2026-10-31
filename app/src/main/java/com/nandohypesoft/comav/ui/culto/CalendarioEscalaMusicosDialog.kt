@@ -71,11 +71,11 @@ fun CalendarioEscalaMusicosDialog(
     var bateristaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baterista) }
     var baixistaEdicao by remember(escalaDoDia) { mutableStateOf(escalaDoDia.baixista) }
 
-    val opcoesMinistros = listOf("Selecione...", "Valdinéia", "Fernanda", "Maísa", "Isabele", "Fabiana", "Daniel", "Fernando", "Outro...")
-    val opcoesVocais = listOf("Selecione...", "Valdinéia", "Fernanda", "Maísa", "Isabele", "Fabiana", "Daniel", "Fernando", "Outro...")
-    val opcoesTeclado = listOf("Selecione...", "Agnaldo", "Daniel", "Fernando", "Outro...")
-    val opcoesViolao = listOf("Selecione...", "Daniel", "Fernando", "Victor", "Outro...")
-    val opcoesBateria = listOf("Selecione...", "Victor", "Felipe", "Fernando", "Outro...")
+    val opcoesMinistros = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_MINISTROS_SPINNER
+    val opcoesVocais = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_VOCAIS_SPINNER
+    val opcoesTeclado = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_TECLADO_SPINNER
+    val opcoesViolao = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_VIOLAO_SPINNER
+    val opcoesBateria = com.nandohypesoft.comav.util.EquipeConfig.OPCOES_BATERIA_SPINNER
 
     AlertDialog(
         onDismissRequest = onDismiss,

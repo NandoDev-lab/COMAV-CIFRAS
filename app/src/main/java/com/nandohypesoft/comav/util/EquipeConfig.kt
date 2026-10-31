@@ -7,23 +7,21 @@ object EquipeConfig {
     val LISTA_MINISTROS = listOf(
         "VALDINÉIA",
         "FERNANDA",
-        "NANDA",
         "MAÍSA",
         "ISABELE",
         "FABIANA",
-        "DANIEL",
-        "FERNANDO"
+        "DANIEL"
     )
 
-    val OPCOES_MINISTROS_SPINNER = listOf("Selecione...") + LISTA_MINISTROS + listOf("Outro...")
+    val OPCOES_MINISTROS_SPINNER = listOf("Selecione...", "VALDINÉIA", "FERNANDA", "MAÍSA", "ISABELE", "FABIANA", "DANIEL")
 
-    val OPCOES_VOCAIS_SPINNER = listOf("Selecione...") + LISTA_MINISTROS + listOf("Outro...")
+    val OPCOES_VOCAIS_SPINNER = listOf("Selecione...", "VALDINÉIA", "FERNANDA", "MAÍSA", "ISABELE", "FABIANA", "DANIEL", "FERNANDO")
 
-    val OPCOES_TECLADO_SPINNER = listOf("Selecione...", "AGNALDO", "DANIEL", "FERNANDO", "Outro...")
+    val OPCOES_TECLADO_SPINNER = listOf("Selecione...", "AGNALDO", "FERNANDO")
 
-    val OPCOES_VIOLAO_SPINNER = listOf("Selecione...", "DANIEL", "FERNANDO", "VICTOR", "Outro...")
+    val OPCOES_VIOLAO_SPINNER = listOf("Selecione...", "DANIEL", "FERNANDO")
 
-    val OPCOES_BATERIA_SPINNER = listOf("Selecione...", "VICTOR", "FELIPE", "FERNANDO", "Outro...")
+    val OPCOES_BATERIA_SPINNER = listOf("Selecione...", "VICTOR", "FELIPE")
 
     fun ehDesenvolvedor(nome: String): Boolean {
         return nome.trim().uppercase().contains("FERNANDO")
