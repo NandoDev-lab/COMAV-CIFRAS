@@ -659,57 +659,100 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             if (podeAcessarAdmin && membrosOnline.isNotEmpty()) {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("🟢", fontSize = 14.sp)
-                            Text(
-                                text = "Membros Conectados Agora (${membrosOnline.size})",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                    color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                                    modifier = Modifier.size(10.dp)
+                                ) {}
+                                Text(
+                                    text = "Membros Conectados Agora",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = androidx.compose.ui.graphics.Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "${membrosOnline.size} online",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
                         }
 
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
                         membrosOnline.forEach { membro ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Surface(
-                                        shape = androidx.compose.foundation.shape.CircleShape,
-                                        color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
-                                        modifier = Modifier.size(8.dp)
-                                    ) {}
-                                    Text(
-                                        text = "${membro.funcao} — ${membro.nomeUsuario}",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("🟢", fontSize = 12.sp)
+                                        Column {
+                                            Text(
+                                                text = membro.nomeUsuario,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = membro.funcao,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
 
-                                if (membro.horarioInicio.isNotBlank()) {
-                                    Text(
-                                        text = "Online às ${membro.horarioInicio}",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    if (membro.horarioInicio.isNotBlank()) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                        ) {
+                                            Text(
+                                                text = "Desde ${membro.horarioInicio}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

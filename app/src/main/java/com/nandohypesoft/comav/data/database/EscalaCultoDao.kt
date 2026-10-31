@@ -10,6 +10,9 @@ interface EscalaCultoDao {
     @Query("SELECT * FROM escala_cultos ORDER BY dataCulto ASC")
     suspend fun obterTodas(): List<EscalaCultoEntity>
 
+    @Query("SELECT * FROM escala_cultos WHERE id = :id LIMIT 1")
+    suspend fun obterPorId(id: String): EscalaCultoEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun salvar(entity: EscalaCultoEntity)
 

@@ -147,10 +147,31 @@ class CultoRepository(
 
     suspend fun excluirEscala(id: String) = withContext(Dispatchers.IO) {
         if (id.isNotEmpty()) {
-            escalaCultoDao?.excluir(id)
-            try {
-                firestore?.collection("escala_cultos")?.document(id)?.delete()?.await()
-            } catch (_: Exception) {}
+            val local = escalaCultoDao?.obterPorId(id)
+            if (local != null) {
+                // Ao excluir o agendamento do culto pelo ADM, reseta o status de preenchimento
+                // para PENDENTE_PREENCHIMENTO, reativando a disponibilidade do card no perfil do ministro
+                val resetada = local.copy(
+                    itensJson = "[]",
+                    statusPreenchimento = "PENDENTE_PREENCHIMENTO",
+                    preenchidaEm = 0L
+                )
+                escalaCultoDao?.salvar(resetada)
+
+                try {
+                    val dadosReset = mapOf<String, Any>(
+                        "itens" to emptyList<Map<String, Any>>(),
+                        "statusPreenchimento" to "PENDENTE_PREENCHIMENTO",
+                        "preenchidaEm" to 0L
+                    )
+                    firestore?.collection("escala_cultos")?.document(id)?.update(dadosReset)?.await()
+                } catch (_: Exception) {}
+            } else {
+                escalaCultoDao?.excluir(id)
+                try {
+                    firestore?.collection("escala_cultos")?.document(id)?.delete()?.await()
+                } catch (_: Exception) {}
+            }
         }
     }
 
