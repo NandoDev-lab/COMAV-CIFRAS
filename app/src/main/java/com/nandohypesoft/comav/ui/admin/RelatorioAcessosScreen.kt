@@ -65,6 +65,19 @@ fun RelatorioAcessosScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val mostrarPainelConectados by viewModel.mostrarPainelConectados.collectAsState()
+
+            if (!mostrarPainelConectados) {
+                OutlinedButton(
+                    onClick = { viewModel.alterarMostrarPainelConectados(true) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("👁️ Desocultar Painel Inicial de Conectados", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+
             Text(
                 text = "📊 Histórico de logins, sessões ativas e saídas dos membros da equipe:",
                 fontSize = 13.sp,

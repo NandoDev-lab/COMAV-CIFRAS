@@ -21,6 +21,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val ESCALA_FONTE = floatPreferencesKey("escala_fonte")
     // Substituído removendo referências ao Gist
         private val MOSTRAR_ESTATISTICAS = booleanPreferencesKey("mostrar_estatisticas")
+        private val MOSTRAR_PAINEL_CONECTADOS = booleanPreferencesKey("mostrar_painel_conectados")
         private val TIPO_FUNCAO_EQUIPE = stringPreferencesKey("tipo_funcao_equipe")
         private val NOME_USUARIO = stringPreferencesKey("nome_usuario")
     }
@@ -52,6 +53,10 @@ class UserPreferencesRepository(private val context: Context) {
         preferences[MOSTRAR_ESTATISTICAS] ?: false
     }
 
+    val mostrarPainelConectados: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[MOSTRAR_PAINEL_CONECTADOS] ?: true
+    }
+
     suspend fun salvarTemaEscuro(ativo: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[TEMA_ESCURO] = ativo
@@ -69,6 +74,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun salvarMostrarEstatisticas(ativo: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[MOSTRAR_ESTATISTICAS] = ativo
+        }
+    }
+
+    suspend fun salvarMostrarPainelConectados(ativo: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MOSTRAR_PAINEL_CONECTADOS] = ativo
         }
     }
 

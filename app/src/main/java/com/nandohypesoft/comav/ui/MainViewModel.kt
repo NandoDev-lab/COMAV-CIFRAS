@@ -145,6 +145,15 @@ class MainViewModel(
     val mostrarEstatisticas: StateFlow<Boolean> = userPreferencesRepository.mostrarEstatisticas
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val mostrarPainelConectados: StateFlow<Boolean> = userPreferencesRepository.mostrarPainelConectados
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun alterarMostrarPainelConectados(ativo: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.salvarMostrarPainelConectados(ativo)
+        }
+    }
+
     val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
 

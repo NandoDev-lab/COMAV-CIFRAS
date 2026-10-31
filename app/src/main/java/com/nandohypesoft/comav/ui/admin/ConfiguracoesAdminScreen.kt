@@ -311,73 +311,103 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
             HorizontalDivider()
 
             Text(
-                text = "Gestão de Escalas e Cultos",
+                text = "Gestão de Escalas e Equipe",
                 fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            Button(
-                onClick = {
-                    viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CADASTRO_ENSAIO)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("🎸 Cadastrar Ensaio da Equipe", color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.CADASTRO_ENSAIO)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                    ) {
+                        Text("🎸 Cadastrar Ensaio da Equipe", color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarCalendarioMusicos = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("📅 Escala Mensal de Equipes", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                    }
+
+                    Button(
+                        onClick = {
+                            mostrarGerenciadorCultos = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text("🗑️ Gerenciar / Excluir Cultos", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                    }
+                }
             }
 
-            Button(
-                onClick = {
-                    mostrarCalendarioMusicos = true
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text("📅 Escala Mensal de Equipes", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
+            Text(
+                text = "Relatórios e Notificações",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-            Button(
-                onClick = {
-                    mostrarGerenciadorCultos = true
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("🗑️ Gerenciar / Excluir Cultos Agendados", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.RELATORIO_ACESSOS)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("📊 Relatório de Acessos e Logins", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                    }
 
-            OutlinedButton(
-                onClick = {
-                    mostrarDialogSimulacaoNotificacoes = true
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
-
-            Button(
-                onClick = {
-                    viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.RELATORIO_ACESSOS)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text("📊 Relatório de Acessos e Sessões", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    OutlinedButton(
+                        onClick = {
+                            mostrarDialogSimulacaoNotificacoes = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("🔔 Testar e Simular Alertas", fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                    }
+                }
             }
 
             HorizontalDivider()

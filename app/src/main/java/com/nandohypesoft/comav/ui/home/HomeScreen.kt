@@ -654,10 +654,11 @@ fun HomeScreen(viewModel: MainViewModel) {
             }
 
             // Visualização de Membros Conectados Agora (Estilo Rede Social para Líder/Admin)
+            val mostrarPainelConectados by viewModel.mostrarPainelConectados.collectAsState()
             val membrosConectados by com.nandohypesoft.comav.util.SessaoManager.membrosConectados.collectAsState()
             val membrosOnline = remember(membrosConectados) { membrosConectados.filter { it.status == "ONLINE" } }
 
-            if (podeAcessarAdmin && membrosOnline.isNotEmpty()) {
+            if (podeAcessarAdmin && mostrarPainelConectados) {
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -675,82 +676,87 @@ fun HomeScreen(viewModel: MainViewModel) {
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Surface(
                                     shape = androidx.compose.foundation.shape.CircleShape,
-                                    color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
-                                    modifier = Modifier.size(10.dp)
+                                    color = if (membrosOnline.isNotEmpty()) androidx.compose.ui.graphics.Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(8.dp)
                                 ) {}
                                 Text(
-                                    text = "Membros Conectados Agora",
+                                    text = "Membros Conectados (${membrosOnline.size})",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
                                 )
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = androidx.compose.ui.graphics.Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            TextButton(
+                                onClick = { viewModel.alterarMostrarPainelConectados(false) },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                             ) {
-                                Text(
-                                    text = "${membrosOnline.size} online",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
+                                Text("👁️ Ocultar", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
-                        membrosOnline.forEach { membro ->
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                        if (membrosOnline.isEmpty()) {
+                            Text(
+                                text = "Nenhum membro conectado no momento.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            membrosOnline.forEach { membro ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("🟢", fontSize = 12.sp)
-                                        Column {
-                                            Text(
-                                                text = membro.nomeUsuario,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = membro.funcao,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-
-                                    if (membro.horarioInicio.isNotBlank()) {
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                            Text(
-                                                text = "Desde ${membro.horarioInicio}",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                            )
+                                            Text("🟢", fontSize = 12.sp)
+                                            Column {
+                                                Text(
+                                                    text = membro.nomeUsuario,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = membro.funcao,
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        if (membro.horarioInicio.isNotBlank()) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.secondaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "Desde ${membro.horarioInicio}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }

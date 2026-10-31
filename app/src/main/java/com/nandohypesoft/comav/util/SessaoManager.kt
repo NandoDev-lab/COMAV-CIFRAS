@@ -130,11 +130,13 @@ object SessaoManager {
                         val inicioEm = doc.getLong("inicioEm") ?: 0L
                         val fimEm = doc.getLong("fimEm") ?: 0L
 
+                        val nomeExibicao = if (dispositivoId == myAndroidId && !nome.contains("(Você)")) "$nome (Você)" else nome
+
                         if (nome.isNotBlank()) {
                             listaMembros.add(
                                 MembroSessao(
                                     dispositivoId = dispositivoId,
-                                    nomeUsuario = nome,
+                                    nomeUsuario = nomeExibicao,
                                     funcao = funcao,
                                     status = status,
                                     horarioInicio = horInicio,
@@ -144,6 +146,21 @@ object SessaoManager {
                             )
                         }
                     }
+
+                    // Garantir que o próprio admin logado apareça na lista se o snapshot remoto atrasar
+                    if (myAndroidId.isNotBlank() && listaMembros.none { it.dispositivoId == myAndroidId }) {
+                        listaMembros.add(
+                            MembroSessao(
+                                dispositivoId = myAndroidId,
+                                nomeUsuario = "$nomeUsuario (Você)",
+                                funcao = tipoFuncao.titulo,
+                                status = "ONLINE",
+                                horarioInicio = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()),
+                                inicioEm = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
                     _membrosConectados.value = listaMembros
 
                     // Processar alterações em tempo real para notificações individuais com horários exatos
