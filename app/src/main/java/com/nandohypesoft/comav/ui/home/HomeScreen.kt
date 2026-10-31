@@ -403,12 +403,23 @@ fun HomeScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Diálogo QR Code Compartilhar
+    // Diálogo QR Code Sincronização & Backup
+    val versaoBancoLocal by viewModel.versaoBancoLocal.collectAsState()
+    var qrPayload by remember { mutableStateOf("") }
+
+    LaunchedEffect(mostrarDialogoCompartilharQr) {
+        if (mostrarDialogoCompartilharQr) {
+            viewModel.gerarPayloadQrCodeBackup { payload, versao ->
+                qrPayload = payload
+            }
+        }
+    }
+
     if (mostrarDialogoCompartilharQr) {
-        val uniqueSessionId = remember { "COMAV_SHARE_${UUID.randomUUID().toString().substring(0, 8).uppercase()}" }
-        val qrBitmap = remember {
-            try {
-                val bitMatrix = QRCodeWriter().encode(uniqueSessionId, BarcodeFormat.QR_CODE, 512, 512)
+        val qrBitmap = remember(qrPayload) {
+            if (qrPayload.isBlank()) null
+            else try {
+                val bitMatrix = QRCodeWriter().encode(qrPayload, BarcodeFormat.QR_CODE, 512, 512)
                 val bmp = Bitmap.createBitmap(512, 512, Bitmap.Config.RGB_565)
                 for (x in 0 until 512) {
                     for (y in 0 until 512) {
@@ -421,37 +432,52 @@ fun HomeScreen(viewModel: MainViewModel) {
 
         AlertDialog(
             onDismissRequest = { mostrarDialogoCompartilharQr = false },
-            title = { Text("Compartilhar App & Banco (QR)") },
+            title = { Text("📱 Sincronização e Backup QR Code") },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "ID Único de Sincronização:\n$uniqueSessionId",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "Versão do Banco Local: v$versaoBancoLocal",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+
                     if (qrBitmap != null) {
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
-                            contentDescription = "QR Code",
-                            modifier = Modifier.size(180.dp)
+                            contentDescription = "QR Code de Backup",
+                            modifier = Modifier.size(200.dp)
                         )
+                    } else {
+                        CircularProgressIndicator(modifier = Modifier.size(36.dp))
                     }
+
+                    Text(
+                        text = "Aparelhos desatualizados podem escanear este QR Code para receber o banco na versão v$versaoBancoLocal.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        launcherExportarBackup.launch("comav_backup_completo.json")
+                        launcherExportarBackup.launch("comav_backup_v${versaoBancoLocal}.json")
                         mostrarDialogoCompartilharQr = false
                     }
                 ) {
-                    Text("Exportar Backup")
+                    Text("Exportar Arquivo")
                 }
             },
             dismissButton = {

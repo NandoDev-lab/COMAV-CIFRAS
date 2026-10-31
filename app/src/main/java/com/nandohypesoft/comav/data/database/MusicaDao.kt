@@ -33,6 +33,9 @@ interface MusicaDao {
     @Query("DELETE FROM musicas WHERE identificador = :identificador AND tipo_de_conteudo = :tipoDeConteudo")
     suspend fun excluir(identificador: Long, tipoDeConteudo: String): Int
 
+    @Query("DELETE FROM musicas")
+    suspend fun limparTabela(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun salvarTodas(entities: List<MusicaEntity>): List<Long>
 }

@@ -152,6 +152,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     LaunchedEffect(Unit) {
         viewModel.iniciarMonitoramentoSessao(context)
+        viewModel.verificarEAtualizarBancoVersaoRemota()
         viewModel.mensagemAlerta.collect { msg ->
             if (msg != null) {
                 snackbarHostState.showSnackbar(msg)

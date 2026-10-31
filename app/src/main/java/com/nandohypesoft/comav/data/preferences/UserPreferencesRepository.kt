@@ -24,6 +24,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val MOSTRAR_PAINEL_CONECTADOS = booleanPreferencesKey("mostrar_painel_conectados")
         private val TIPO_FUNCAO_EQUIPE = stringPreferencesKey("tipo_funcao_equipe")
         private val NOME_USUARIO = stringPreferencesKey("nome_usuario")
+        private val VERSAO_BANCO_LOCAL = androidx.datastore.preferences.core.longPreferencesKey("versao_banco_local")
     }
 
     val nomeUsuario: Flow<String> = context.dataStore.data.map { preferences ->
@@ -86,6 +87,27 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun salvarTipoFuncaoEquipe(tipo: TipoFuncaoEquipe) {
         context.dataStore.edit { preferences ->
             preferences[TIPO_FUNCAO_EQUIPE] = tipo.name
+        }
+    }
+
+    val versaoBancoLocal: Flow<Long> = context.dataStore.data.map { preferences ->
+        preferences[VERSAO_BANCO_LOCAL] ?: 1L
+    }
+
+    suspend fun incrementarVersaoBancoLocal(): Long {
+        var novaVersao = 1L
+        context.dataStore.edit { preferences ->
+            val atual = preferences[VERSAO_BANCO_LOCAL] ?: 1L
+            novaVersao = atual + 1L
+            preferences[VERSAO_BANCO_LOCAL] = novaVersao
+        }
+        return novaVersao
+    }
+
+    suspend fun atualizarVersaoBancoLocal(novaVersao: Long) {
+        context.dataStore.edit { preferences ->
+            val atual = preferences[VERSAO_BANCO_LOCAL] ?: 1L
+            preferences[VERSAO_BANCO_LOCAL] = maxOf(atual, novaVersao)
         }
     }
 

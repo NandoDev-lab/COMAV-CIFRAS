@@ -372,4 +372,69 @@ class MusicaRepository(
 
         sucessoCount
     }
+
+    suspend fun obterVersaoBancoRemoto(): Long = withContext(Dispatchers.IO) {
+        try {
+            val doc = firestore?.collection("configuracao_banco")?.document("metadata")?.get()?.await()
+            if (doc != null && doc.exists()) {
+                doc.getLong("versao") ?: 1L
+            } else 1L
+        } catch (_: Exception) {
+            1L
+        }
+    }
+
+    suspend fun publicarVersaoBancoRemoto(novaVersao: Long) = withContext(Dispatchers.IO) {
+        try {
+            val dados = mapOf(
+                "versao" to novaVersao,
+                "atualizadoEm" to System.currentTimeMillis(),
+                "atualizadoPor" to "FERNANDO"
+            )
+            firestore?.collection("configuracao_banco")?.document("metadata")?.set(dados)?.await()
+        } catch (_: Exception) {}
+    }
+
+    suspend fun recarregarBancoDoZeroDoFirebase(): Int = withContext(Dispatchers.IO) {
+        val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
+
+        musicaDao.limparTabela()
+
+        val result = db.collection("musicas").get().await()
+        val entidadesParaSalvar = mutableListOf<MusicaEntity>()
+
+        for (doc in result.documents) {
+            val identificador = doc.getLong("identificador") ?: continue
+            val tipoStr = doc.getString("tipoDeConteudo") ?: "LETRA"
+            val titulo = doc.getString("titulo") ?: ""
+            val conteudo = doc.getString("conteudo") ?: ""
+            val conteudoOriginal = doc.getString("conteudoOriginal") ?: ""
+            val tipoOrigemStr = doc.getString("tipoDeOrigem") ?: "MANUAL"
+            val nomeArquivo = doc.getString("nomeDoArquivoDeOrigem") ?: ""
+            val criadaEm = doc.getLong("criadaEm") ?: System.currentTimeMillis()
+            val atualizadaEm = doc.getLong("atualizadaEm") ?: System.currentTimeMillis()
+
+            val norm = normalizarTitulo(titulo)
+
+            entidadesParaSalvar.add(
+                MusicaEntity(
+                    identificador = identificador,
+                    titulo = titulo.trim(),
+                    tituloNormalizado = norm,
+                    conteudo = conteudo,
+                    conteudoOriginal = conteudoOriginal,
+                    tipoDeConteudo = tipoStr,
+                    tipoDeOrigem = tipoOrigemStr,
+                    nomeArquivoOrigem = nomeArquivo,
+                    criadaEm = criadaEm,
+                    atualizadaEm = atualizadaEm
+                )
+            )
+        }
+
+        if (entidadesParaSalvar.isNotEmpty()) {
+            musicaDao.salvarTodas(entidadesParaSalvar)
+        }
+        entidadesParaSalvar.size
+    }
 }

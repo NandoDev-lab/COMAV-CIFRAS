@@ -31,6 +31,9 @@ import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import com.nandohypesoft.comav.util.NotificacaoManager
 import com.nandohypesoft.comav.util.NotificacaoWorker
 import com.nandohypesoft.comav.util.SessaoManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.tasks.await
@@ -153,6 +156,9 @@ class MainViewModel(
             userPreferencesRepository.salvarMostrarPainelConectados(ativo)
         }
     }
+
+    val versaoBancoLocal: StateFlow<Long> = userPreferencesRepository.versaoBancoLocal
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1L)
 
     val tipoFuncaoEquipe: StateFlow<TipoFuncaoEquipe> = userPreferencesRepository.tipoFuncaoEquipe
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TipoFuncaoEquipe.NAO_DEFINIDO)
@@ -608,15 +614,70 @@ class MainViewModel(
         }
     }
 
+    fun gerarPayloadQrCodeBackup(onPronto: (payloadJson: String, versao: Long) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val versaoAtual = userPreferencesRepository.versaoBancoLocal.first()
+                val backupObj = repository.exportarBanco()
+                val jsonBase = com.google.gson.Gson().toJson(backupObj)
+
+                val jsonObject = org.json.JSONObject(jsonBase).apply {
+                    put("comav_backup", true)
+                    put("versao_banco", versaoAtual)
+                    put("gerado_em", SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale.getDefault()).format(Date()))
+                }
+                onPronto(jsonObject.toString(), versaoAtual)
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao gerar QR Code: ${e.localizedMessage}"
+            }
+        }
+    }
+
     fun importarBackupTexto(jsonTexto: String) {
         viewModelScope.launch {
             try {
-                val qtd = repository.importarBanco(jsonTexto)
-                recarregar()
-                _mensagemAlerta.value = "Backup restaurado via QR Code: $qtd música(s) adicionada(s)."
+                val jsonObject = org.json.JSONObject(jsonTexto)
+                val isComavBackup = jsonObject.optBoolean("comav_backup", false) || jsonObject.optString("formato") == "COMAV_BACKUP"
+                val versaoQr = jsonObject.optLong("versao_banco", jsonObject.optLong("versao", 1L))
+                val versaoAtual = userPreferencesRepository.versaoBancoLocal.first()
+
+                if (isComavBackup || jsonObject.has("musicas")) {
+                    if (versaoQr <= versaoAtual && versaoAtual > 1L) {
+                        _mensagemAlerta.value = "ℹ️ Seu banco de dados já está na versão mais recente (v$versaoAtual) ou igual."
+                        return@launch
+                    }
+
+                    val qtd = repository.importarBanco(jsonTexto)
+
+                    userPreferencesRepository.atualizarVersaoBancoLocal(versaoQr)
+                    recarregar()
+                    _mensagemAlerta.value = "✅ Banco atualizado com sucesso para a versão v$versaoQr! ($qtd músicas)"
+                } else {
+                    val qtd = repository.importarBanco(jsonTexto)
+                    userPreferencesRepository.incrementarVersaoBancoLocal()
+                    recarregar()
+                    _mensagemAlerta.value = "✅ Backup QR importado com sucesso: $qtd música(s) adicionada(s)."
+                }
             } catch (e: Exception) {
-                _mensagemAlerta.value = "QR Code inválido ou não é um backup COMAV: ${e.localizedMessage}"
+                _mensagemAlerta.value = "⚠️ QR Code inválido ou não é um backup COMAV: ${e.localizedMessage}"
             }
+        }
+    }
+
+    fun verificarEAtualizarBancoVersaoRemota() {
+        viewModelScope.launch {
+            try {
+                val versaoRemota = repository.obterVersaoBancoRemoto()
+                val versaoAtual = userPreferencesRepository.versaoBancoLocal.first()
+
+                if (versaoRemota > versaoAtual) {
+                    _mensagemAlerta.value = "🔄 Nova versão do banco (v$versaoRemota) na nuvem! Atualizando..."
+                    val qtd = repository.recarregarBancoDoZeroDoFirebase()
+                    userPreferencesRepository.atualizarVersaoBancoLocal(versaoRemota)
+                    recarregar()
+                    _mensagemAlerta.value = "✅ Banco de dados atualizado do zero para a versão v$versaoRemota ($qtd músicas)!"
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -624,9 +685,19 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 _mensagemAlerta.value = "Conectando ao Firebase..."
-                val qtdFirebase = repository.sincronizarComFirebase()
-                recarregar()
-                _mensagemAlerta.value = "Sincronização concluída: $qtdFirebase música(s) atualizadas(s) do Firebase!"
+                val versaoRemota = repository.obterVersaoBancoRemoto()
+                val versaoAtual = userPreferencesRepository.versaoBancoLocal.first()
+
+                if (versaoRemota > versaoAtual) {
+                    val qtd = repository.recarregarBancoDoZeroDoFirebase()
+                    userPreferencesRepository.atualizarVersaoBancoLocal(versaoRemota)
+                    recarregar()
+                    _mensagemAlerta.value = "✅ Banco de dados atualizado para a versão v$versaoRemota ($qtd músicas)!"
+                } else {
+                    val qtdFirebase = repository.sincronizarComFirebase()
+                    recarregar()
+                    _mensagemAlerta.value = "Sincronização concluída: $qtdFirebase música(s) atualizada(s)!"
+                }
             } catch (e: Exception) {
                 _mensagemAlerta.value = "Erro na sincronização Firebase: ${e.localizedMessage}"
             }
@@ -637,8 +708,10 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 _mensagemAlerta.value = "Iniciando migração para o Firebase..."
+                val novaVersao = userPreferencesRepository.incrementarVersaoBancoLocal()
                 val qtdMigrados = repository.migrarBancoParaFirebase()
-                _mensagemAlerta.value = "Migração concluída com sucesso! $qtdMigrados música(s) enviada(s)."
+                repository.publicarVersaoBancoRemoto(novaVersao)
+                _mensagemAlerta.value = "Migração concluída com sucesso (v$novaVersao)! $qtdMigrados música(s) enviada(s)."
             } catch (e: Exception) {
                 _mensagemAlerta.value = "Erro ao migrar para Firebase: ${e.localizedMessage}"
             }
