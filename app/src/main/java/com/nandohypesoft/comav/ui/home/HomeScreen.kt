@@ -653,6 +653,70 @@ fun HomeScreen(viewModel: MainViewModel) {
                 }
             }
 
+            // Visualização de Membros Conectados Agora (Estilo Rede Social para Líder/Admin)
+            val membrosConectados by com.nandohypesoft.comav.util.SessaoManager.membrosConectados.collectAsState()
+            val membrosOnline = remember(membrosConectados) { membrosConectados.filter { it.status == "ONLINE" } }
+
+            if (podeAcessarAdmin && membrosOnline.isNotEmpty()) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("🟢", fontSize = 14.sp)
+                            Text(
+                                text = "Membros Conectados Agora (${membrosOnline.size})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        membrosOnline.forEach { membro ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Surface(
+                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                        color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                                        modifier = Modifier.size(8.dp)
+                                    ) {}
+                                    Text(
+                                        text = "${membro.funcao} — ${membro.nomeUsuario}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                if (membro.horarioInicio.isNotBlank()) {
+                                    Text(
+                                        text = "Online às ${membro.horarioInicio}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             val formatoData = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
             val formatoDisplay = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
             val hojeStr = remember { formatoData.format(Date()) }

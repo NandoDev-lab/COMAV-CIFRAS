@@ -145,6 +145,11 @@ fun MainScreen(viewModel: MainViewModel) {
         return
     }
 
+    if (telaAtual == TelaDestino.RELATORIO_ACESSOS) {
+        com.nandohypesoft.comav.ui.admin.RelatorioAcessosScreen(viewModel = viewModel, onVoltar = { viewModel.navegarPara(TelaDestino.CONFIGURACOES_ADMIN) })
+        return
+    }
+
     LaunchedEffect(Unit) {
         viewModel.mensagemAlerta.collect { msg ->
             if (msg != null) {

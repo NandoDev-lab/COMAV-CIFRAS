@@ -367,6 +367,19 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                 Text("🔔 Testar e Simular Alertas / Notificações", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
+            Button(
+                onClick = {
+                    viewModel.navegarPara(com.nandohypesoft.comav.ui.TelaDestino.RELATORIO_ACESSOS)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("📊 Relatório de Acessos e Sessões", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
             HorizontalDivider()
 
             Text(

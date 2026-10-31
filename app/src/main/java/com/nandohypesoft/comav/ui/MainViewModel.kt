@@ -30,6 +30,7 @@ import com.nandohypesoft.comav.model.TipoDeOrigem
 import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import com.nandohypesoft.comav.util.NotificacaoManager
 import com.nandohypesoft.comav.util.NotificacaoWorker
+import com.nandohypesoft.comav.util.SessaoManager
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.tasks.await
@@ -48,7 +49,8 @@ enum class TelaDestino {
     CADASTRO_CULTO,
     CADASTRO_ENSAIO,
     ESTATISTICAS,
-    CONFIGURACOES_ADMIN
+    CONFIGURACOES_ADMIN,
+    RELATORIO_ACESSOS
 }
 
 fun normalizarQuebrasDeLinha(texto: String): String {
@@ -191,6 +193,8 @@ class MainViewModel(
             userPreferencesRepository.salvarTipoFuncaoEquipe(tipo)
             userPreferencesRepository.salvarNomeUsuario(nomeMaiusculo)
             NotificacaoManager.registrarPerfilDispositivoFirebase(context, tipo, nomeMaiusculo)
+            SessaoManager.iniciarSessaoAtiva(context, nomeMaiusculo, tipo)
+            SessaoManager.escutarAtividadesSessaoFirebase(context, tipo, nomeMaiusculo)
             iniciarAgendadorWorkManager(context)
             NotificacaoManager.verificarEAgendarAlertas(
                 context = context,
