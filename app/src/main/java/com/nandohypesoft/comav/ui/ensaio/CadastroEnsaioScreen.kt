@@ -1,6 +1,5 @@
 package com.nandohypesoft.comav.ui.ensaio
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -31,33 +30,12 @@ import java.util.Locale
 fun CadastroEnsaioScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
     val context = LocalContext.current
 
-    val displayDateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
-    val storageDateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val tercasDisponiveis = remember { calcularTercasDisponiveis() }
 
-    var dataBrInput by remember { mutableStateOf("") }
+    var dataBrInput by remember { mutableStateOf(tercasDisponiveis.firstOrNull()?.first ?: "") }
+    var dataIsoInput by remember { mutableStateOf(tercasDisponiveis.firstOrNull()?.second ?: "") }
     var linkYoutube1Input by remember { mutableStateOf("") }
     var linkYoutube2Input by remember { mutableStateOf("") }
-
-    val diaSemanaCalculado = remember(dataBrInput) {
-        try {
-            val date = displayDateFormat.parse(dataBrInput.trim())
-            if (date != null) {
-                val cal = Calendar.getInstance().apply { time = date }
-                when (cal.get(Calendar.DAY_OF_WEEK)) {
-                    Calendar.SUNDAY -> "Domingo"
-                    Calendar.MONDAY -> "Segunda-feira"
-                    Calendar.TUESDAY -> "Terça-feira"
-                    Calendar.WEDNESDAY -> "Quarta-feira"
-                    Calendar.THURSDAY -> "Quinta-feira"
-                    Calendar.FRIDAY -> "Sexta-feira"
-                    Calendar.SATURDAY -> "Sábado"
-                    else -> ""
-                }
-            } else ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
 
     val thumb1 = remember(linkYoutube1Input) { YouTubeUtil.obterUrlThumbnail(linkYoutube1Input) }
     val thumb2 = remember(linkYoutube2Input) { YouTubeUtil.obterUrlThumbnail(linkYoutube2Input) }
@@ -83,37 +61,19 @@ fun CadastroEnsaioScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "📅 Informe a data do ensaio e os links do YouTube para estudo dos louvores:",
+                text = "📅 Os ensaios acontecem às terças-feiras. Selecione a data e inclua os links do YouTube para estudo:",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            OutlinedTextField(
-                value = dataBrInput,
-                onValueChange = { input ->
-                    val digits = input.filter { it.isDigit() }.take(8)
-                    val formatted = when {
-                        digits.length >= 5 -> "${digits.substring(0, 2)}/${digits.substring(2, 4)}/${digits.substring(4)}"
-                        digits.length >= 3 -> "${digits.substring(0, 2)}/${digits.substring(2)}"
-                        else -> digits
-                    }
-                    dataBrInput = formatted
-                },
-                label = { Text("Data do Ensaio (DD/MM/AAAA)") },
-                placeholder = { Text("Ex: 27/02/2026") },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            SeletorTercaSpinner(
+                tercasDisponiveis = tercasDisponiveis,
+                dataSelecionadaBr = dataBrInput,
+                onDataSelecionada = { dataBr, dataIso ->
+                    dataBrInput = dataBr
+                    dataIsoInput = dataIso
+                }
             )
-
-            if (diaSemanaCalculado.isNotBlank()) {
-                Text(
-                    text = "Dia da semana: $diaSemanaCalculado",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
 
             HorizontalDivider()
 
@@ -197,21 +157,14 @@ fun CadastroEnsaioScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
             Button(
                 onClick = {
-                    if (dataBrInput.isBlank() || diaSemanaCalculado.isBlank()) {
-                        Toast.makeText(context, "Por favor, digite uma data válida (DD/MM/AAAA).", Toast.LENGTH_SHORT).show()
+                    if (dataBrInput.isBlank() || dataIsoInput.isBlank()) {
+                        Toast.makeText(context, "Por favor, selecione uma terça-feira válida.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
-                    val storageDateStr = try {
-                        val d = displayDateFormat.parse(dataBrInput.trim())
-                        if (d != null) storageDateFormat.format(d) else dataBrInput.trim()
-                    } catch (_: Exception) {
-                        dataBrInput.trim()
-                    }
-
                     val novoEnsaio = Ensaio(
-                        dataEnsaio = storageDateStr,
-                        diaSemana = diaSemanaCalculado,
+                        dataEnsaio = dataIsoInput,
+                        diaSemana = "Terça-feira",
                         linkYoutube1 = linkYoutube1Input.trim(),
                         linkYoutube2 = linkYoutube2Input.trim(),
                         status = "AGENDADO"
@@ -230,4 +183,121 @@ fun CadastroEnsaioScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SeletorTercaSpinner(
+    tercasDisponiveis: List<Pair<String, String>>,
+    dataSelecionadaBr: String,
+    onDataSelecionada: (dataBr: String, dataIso: String) -> Unit
+) {
+    var expandido by remember { mutableStateOf(false) }
+
+    val textoExibicao = if (dataSelecionadaBr.isBlank()) {
+        "Selecione a terça-feira..."
+    } else {
+        "📅 $dataSelecionadaBr — Terça-feira"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expandido,
+        onExpandedChange = { expandido = !expandido },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = textoExibicao,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("📅 Data do Ensaio (Terças-feiras)") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+            shape = RoundedCornerShape(10.dp),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expandido,
+            onDismissRequest = { expandido = false }
+        ) {
+            tercasDisponiveis.forEach { (dataBr, dataIso) ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = "📅 $dataBr (Terça-feira)",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    },
+                    onClick = {
+                        onDataSelecionada(dataBr, dataIso)
+                        expandido = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+fun calcularTercasDisponiveis(): List<Pair<String, String>> {
+    val resultado = mutableListOf<Pair<String, String>>()
+    val cal = Calendar.getInstance()
+
+    val hojeCal = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val formatoDisplay = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val formatoStorage = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    val mesAtual = cal.get(Calendar.MONTH)
+    val maxDiasMesAtual = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+    for (dia in cal.get(Calendar.DAY_OF_MONTH)..maxDiasMesAtual) {
+        val tempCal = Calendar.getInstance().apply {
+            set(Calendar.MONTH, mesAtual)
+            set(Calendar.DAY_OF_MONTH, dia)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        if (tempCal.get(Calendar.DAY_OF_WEEK) == Calendar.TUESDAY && !tempCal.before(hojeCal)) {
+            resultado.add(Pair(formatoDisplay.format(tempCal.time), formatoStorage.format(tempCal.time)))
+        }
+    }
+
+    if (resultado.isEmpty()) {
+        val proximoMesCal = Calendar.getInstance().apply {
+            add(Calendar.MONTH, 1)
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val proximoMes = proximoMesCal.get(Calendar.MONTH)
+        val maxDiasProximoMes = proximoMesCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+        for (dia in 1..maxDiasProximoMes) {
+            val tempCal = Calendar.getInstance().apply {
+                set(Calendar.MONTH, proximoMes)
+                set(Calendar.DAY_OF_MONTH, dia)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            if (tempCal.get(Calendar.DAY_OF_WEEK) == Calendar.TUESDAY) {
+                resultado.add(Pair(formatoDisplay.format(tempCal.time), formatoStorage.format(tempCal.time)))
+            }
+        }
+    }
+
+    return resultado
 }
