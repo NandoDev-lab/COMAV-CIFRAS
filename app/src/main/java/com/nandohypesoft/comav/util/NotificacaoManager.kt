@@ -78,7 +78,7 @@ object NotificacaoManager {
         dispararNotificacaoLocal(
             context = context,
             titulo = "❌ Ensaio Cancelado!",
-            mensagem = "O ensaio previsto para $diaSemanaStr ($dataEnsaioStr) foi CANCELADO pelo líder/administrador.",
+            mensagem = "O ensaio previsto para $diaSemanaStr ($dataEnsaioStr) foi CANCELADO pela liderança.",
             notificationId = 2001
         )
     }

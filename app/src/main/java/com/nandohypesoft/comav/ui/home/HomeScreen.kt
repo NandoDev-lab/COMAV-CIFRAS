@@ -158,7 +158,7 @@ fun HomeScreen(viewModel: MainViewModel) {
 
         AlertDialog(
             onDismissRequest = { mostrarGerenciadorEscalaMusicos = false },
-            title = { Text("Escala de Músicos (Administrador)") },
+            title = { Text("Escala de Músicos (Líder / Desenvolvedor)") },
             text = {
                 Column(
                     modifier = Modifier
@@ -1113,7 +1113,7 @@ fun HomeScreen(viewModel: MainViewModel) {
 
                             if (ehCancelado) {
                                 Text(
-                                    text = "⚠️ ATENÇÃO: O ensaio previsto para esta data foi CANCELADO pelo líder/administrador.",
+                                    text = "⚠️ ATENÇÃO: O ensaio previsto para esta data foi CANCELADO pela liderança.",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onErrorContainer

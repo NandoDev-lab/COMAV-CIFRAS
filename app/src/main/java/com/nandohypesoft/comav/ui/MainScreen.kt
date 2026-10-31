@@ -1044,17 +1044,17 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 
-    // Diálogo de Senha Administrativa
+    // Diálogo de Senha da Liderança
     if (mostrarDialogoSenhaAdmin) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoSenhaAdmin = false },
-            title = { Text("Acesso Administrativo") },
+            title = { Text("Acesso da Liderança") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Informe a senha para acessar o painel:", fontSize = 14.sp)
+                    Text("Informe a senha para acessar a gestão:", fontSize = 14.sp)
                     OutlinedTextField(
                         value = senhaAdminDigitada,
                         onValueChange = {
@@ -1099,11 +1099,11 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Painel Administrativo
+    // Painel de Gestão da Liderança
     if (mostrarPainelAdmin) {
         AlertDialog(
             onDismissRequest = { mostrarPainelAdmin = false },
-            title = { Text("Painel Administrativo") },
+            title = { Text("Gestão da Liderança") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
