@@ -455,91 +455,128 @@ fun ConfiguracoesAdminScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                var versaoPublicadaSucesso by remember { mutableStateOf<String?>(null) }
                 var versionCodeInput by remember { mutableStateOf("2") }
                 var versionNameInput by remember { mutableStateOf("v1.2") }
                 var urlApkInput by remember { mutableStateOf("https://github.com/NandoDev-lab/COMAV-CIFRAS/releases/download/v1.2/COMAV_Cifras_v1.2.apk") }
                 var notasInput by remember { mutableStateOf("• Melhorias gerais e novas funções\n• Sincronização automática de banco e aplicativo") }
                 var obrigatoriaInput by remember { mutableStateOf(false) }
 
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                if (versaoPublicadaSucesso != null) {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            OutlinedTextField(
-                                value = versionCodeInput,
-                                onValueChange = { versionCodeInput = it.filter { char -> char.isDigit() } },
-                                label = { Text("Version Code") },
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
+                            Text(
+                                text = "✅ Versão $versaoPublicadaSucesso Publicada com Sucesso!",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                            OutlinedTextField(
-                                value = versionNameInput,
-                                onValueChange = { versionNameInput = it },
-                                label = { Text("Version Name") },
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
+                            Text(
+                                text = "Os membros receberão o aviso de atualização ao abrirem o aplicativo.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
+                            OutlinedButton(
+                                onClick = { versaoPublicadaSucesso = null },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text("📝 Lançar Outra Versão", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
                         }
-
-                        OutlinedTextField(
-                            value = urlApkInput,
-                            onValueChange = { urlApkInput = it },
-                            label = { Text("URL de Download do APK") },
-                            placeholder = { Text("https://.../app-release.apk") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = notasInput,
-                            onValueChange = { notasInput = it },
-                            label = { Text("Notas da Versão / Release Notes") },
-                            minLines = 2,
-                            maxLines = 4,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    }
+                } else {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Checkbox(
-                                checked = obrigatoriaInput,
-                                onCheckedChange = { obrigatoriaInput = it }
-                            )
-                            Text("Atualização Obrigatória", fontSize = 13.sp)
-                        }
-
-                        Button(
-                            onClick = {
-                                val code = versionCodeInput.toLongOrNull() ?: 1L
-                                val novaVersao = com.nandohypesoft.comav.model.VersaoApp(
-                                    versionCode = code,
-                                    versionName = versionNameInput.ifBlank { "v$code.0" },
-                                    urlApk = urlApkInput.trim(),
-                                    obrigatoria = obrigatoriaInput,
-                                    notasAtualizacao = notasInput.trim(),
-                                    publicadoEm = SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale.getDefault()).format(Date())
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = versionCodeInput,
+                                    onValueChange = { versionCodeInput = it.filter { char -> char.isDigit() } },
+                                    label = { Text("Version Code") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
                                 )
-                                viewModel.publicarNovaVersaoApp(novaVersao) {}
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
-                        ) {
-                            Text("🚀 Publicar Nova Versão para Toda a Equipe", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                OutlinedTextField(
+                                    value = versionNameInput,
+                                    onValueChange = { versionNameInput = it },
+                                    label = { Text("Version Name") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            OutlinedTextField(
+                                value = urlApkInput,
+                                onValueChange = { urlApkInput = it },
+                                label = { Text("URL de Download do APK") },
+                                placeholder = { Text("https://.../app-release.apk") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = notasInput,
+                                onValueChange = { notasInput = it },
+                                label = { Text("Notas da Versão / Release Notes") },
+                                minLines = 2,
+                                maxLines = 4,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = obrigatoriaInput,
+                                    onCheckedChange = { obrigatoriaInput = it }
+                                )
+                                Text("Atualização Obrigatória", fontSize = 13.sp)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val code = versionCodeInput.toLongOrNull() ?: 1L
+                                    val novaVersao = com.nandohypesoft.comav.model.VersaoApp(
+                                        versionCode = code,
+                                        versionName = versionNameInput.ifBlank { "v$code.0" },
+                                        urlApk = urlApkInput.trim(),
+                                        obrigatoria = obrigatoriaInput,
+                                        notasAtualizacao = notasInput.trim(),
+                                        publicadoEm = SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale.getDefault()).format(Date())
+                                    )
+                                    viewModel.publicarNovaVersaoApp(novaVersao) {
+                                        versaoPublicadaSucesso = novaVersao.versionName
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Text("🚀 Publicar Nova Versão para Toda a Equipe", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
