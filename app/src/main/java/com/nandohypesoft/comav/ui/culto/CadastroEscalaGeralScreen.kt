@@ -131,7 +131,7 @@ fun CadastroEscalaGeralScreen(viewModel: MainViewModel, onVoltar: () -> Unit) {
 
             SeletorMusicoSpinner(
                 label = "Ministro / Dirigente Escalado",
-                icone = "👑",
+                icone = "🎼",
                 musicoSelecionado = ministroInput,
                 opcoesMusicos = opcoesMinistros,
                 onMusicoSelecionado = { ministroInput = it }

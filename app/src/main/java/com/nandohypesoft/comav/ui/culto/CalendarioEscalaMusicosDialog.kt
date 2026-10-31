@@ -270,7 +270,7 @@ fun CalendarioEscalaMusicosDialog(
 
                     SeletorMusicoSpinner(
                         label = "Ministro / Dirigente",
-                        icone = "👑",
+                        icone = "🎼",
                         musicoSelecionado = ministroEdicao,
                         opcoesMusicos = opcoesMinistros,
                         onMusicoSelecionado = { ministroEdicao = it }
