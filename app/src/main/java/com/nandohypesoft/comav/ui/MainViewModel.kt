@@ -416,6 +416,18 @@ class MainViewModel(
         }
     }
 
+    fun excluirEnsaio(ensaio: Ensaio) {
+        viewModelScope.launch {
+            try {
+                ensaioRepository.excluirEnsaio(ensaio.id)
+                carregarEnsaios()
+                _mensagemAlerta.value = "Ensaio excluído do banco de dados com sucesso!"
+            } catch (e: Exception) {
+                _mensagemAlerta.value = "Erro ao excluir ensaio: ${e.localizedMessage}"
+            }
+        }
+    }
+
     fun carregarEscalasMusicosData() {
         viewModelScope.launch {
             try {

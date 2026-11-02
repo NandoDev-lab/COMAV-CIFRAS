@@ -7,8 +7,10 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,7 +52,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
@@ -78,7 +80,11 @@ fun HomeScreen(viewModel: MainViewModel) {
     var mostrarGerenciadorEscalaMusicos by remember { mutableStateOf(false) }
     var mostrarCalendarioMusicos by remember { mutableStateOf(false) }
     var escalaParaDetalhes by remember { mutableStateOf<EscalaCulto?>(null) }
+    var ensaioParaExcluir by remember { mutableStateOf<Ensaio?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val formatoData = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val formatoDisplay = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     val launcherExportarBackup = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -496,6 +502,43 @@ fun HomeScreen(viewModel: MainViewModel) {
                 viewModel.importarBackupTexto(scannedResult)
             },
             onDismiss = { mostrarLeitorQrCode = false }
+        )
+    }
+
+    if (ensaioParaExcluir != null) {
+        val ensaioAlvo = ensaioParaExcluir!!
+        val dataExibicaoAlvo = try {
+            val d = formatoData.parse(ensaioAlvo.dataEnsaio)
+            if (d != null) formatoDisplay.format(d) else ensaioAlvo.dataEnsaio
+        } catch (_: Exception) {
+            ensaioAlvo.dataEnsaio
+        }
+
+        AlertDialog(
+            onDismissRequest = { ensaioParaExcluir = null },
+            title = { Text("🗑️ Excluir Ensaio") },
+            text = {
+                Text(
+                    text = "Deseja realmente excluir permanentemente o ensaio de ${ensaioAlvo.diaSemana} ($dataExibicaoAlvo)?",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.excluirEnsaio(ensaioAlvo)
+                        ensaioParaExcluir = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Excluir Ensaio")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { ensaioParaExcluir = null }) {
+                    Text("Cancelar")
+                }
+            }
         )
     }
 
@@ -977,7 +1020,17 @@ fun HomeScreen(viewModel: MainViewModel) {
                         colors = CardDefaults.cardColors(
                             containerColor = if (ehCancelado) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                enabled = podeAcessarAdmin,
+                                onClick = {},
+                                onLongClick = {
+                                    if (podeAcessarAdmin) {
+                                        ensaioParaExcluir = ensaio
+                                    }
+                                }
+                            )
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
