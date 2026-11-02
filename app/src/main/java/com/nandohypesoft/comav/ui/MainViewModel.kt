@@ -163,9 +163,14 @@ class MainViewModel(
     private val _versaoAppRemota = MutableStateFlow<com.nandohypesoft.comav.model.VersaoApp?>(null)
     val versaoAppRemota: StateFlow<com.nandohypesoft.comav.model.VersaoApp?> = _versaoAppRemota.asStateFlow()
 
-    fun verificarAtualizacaoAppRemoto(versionCodeAtual: Long = 1L) {
+    private var alertaAtualizacaoDispensadoNestaSessao = false
+
+    fun verificarAtualizacaoAppRemoto(context: Context) {
+        if (alertaAtualizacaoDispensadoNestaSessao) return
+
         viewModelScope.launch {
             try {
+                val versionCodeAtual = com.nandohypesoft.comav.util.UpdateManager.obterVersionCodeInstalado(context)
                 val novaVersao = com.nandohypesoft.comav.util.UpdateManager.verificarNovaVersaoRemota(versionCodeAtual)
                 _versaoAppRemota.value = novaVersao
             } catch (_: Exception) {}
@@ -173,6 +178,7 @@ class MainViewModel(
     }
 
     fun dispensarAlertaAtualizacaoApp() {
+        alertaAtualizacaoDispensadoNestaSessao = true
         _versaoAppRemota.value = null
     }
 
@@ -548,8 +554,16 @@ class MainViewModel(
     }
 
     fun abrirCriacao() {
+        val tipoConteudoFinal = if (_modoBusca.value == ModoDeBusca.CIFRA) TipoDeConteudo.CIFRA else TipoDeConteudo.LETRA
         _musicaAberta.value = null
-        _rascunho.value = criarRascunho()
+        _rascunho.value = MusicaNova(
+            titulo = "",
+            conteudo = "",
+            conteudoOriginal = "",
+            tipoDeConteudo = tipoConteudoFinal,
+            tipoDeOrigem = TipoDeOrigem.MANUAL,
+            nomeDoArquivoDeOrigem = null
+        )
         _editorVisivel.value = true
     }
 

@@ -162,7 +162,7 @@ fun MainScreen(viewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         viewModel.iniciarMonitoramentoSessao(context)
         viewModel.verificarEAtualizarBancoVersaoRemota()
-        viewModel.verificarAtualizacaoAppRemoto()
+        viewModel.verificarAtualizacaoAppRemoto(context)
         viewModel.mensagemAlerta.collect { msg ->
             if (msg != null) {
                 snackbarHostState.showSnackbar(msg)
@@ -869,22 +869,19 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Tipo de Conteúdo (Letra / Cifra)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Tipo de Conteúdo fixo e simplificado
+                    val ehCifra = rascunho.tipoDeConteudo == TipoDeConteudo.CIFRA
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        ModoBuscaBotao(
-                            texto = "Letra",
-                            ativo = rascunho.tipoDeConteudo == TipoDeConteudo.LETRA,
-                            onClick = { viewModel.atualizarRascunho(rascunho.copy(tipoDeConteudo = TipoDeConteudo.LETRA)) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ModoBuscaBotao(
-                            texto = "Cifra",
-                            ativo = rascunho.tipoDeConteudo == TipoDeConteudo.CIFRA,
-                            onClick = { viewModel.atualizarRascunho(rascunho.copy(tipoDeConteudo = TipoDeConteudo.CIFRA)) },
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            text = if (ehCifra) "🎸 Salvando na Lista de CIFRAS" else "🎤 Salvando na Lista de LETRAS",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                         )
                     }
 

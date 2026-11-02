@@ -1,5 +1,6 @@
 package com.nandohypesoft.comav.util
 
+import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -17,6 +18,20 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 object UpdateManager {
+
+    fun obterVersionCodeInstalado(context: Context): Long {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toLong()
+            }
+        } catch (_: Exception) {
+            1L
+        }
+    }
 
     suspend fun verificarNovaVersaoRemota(versionCodeAtual: Long): VersaoApp? = withContext(Dispatchers.IO) {
         try {
@@ -65,6 +80,42 @@ object UpdateManager {
         }
     }
 
+    private fun abrirConexaoComRedirects(urlInitialStr: String): HttpURLConnection {
+        var url = URL(urlInitialStr)
+        var connection = url.openConnection() as HttpURLConnection
+        connection.instanceFollowRedirects = true
+        connection.connectTimeout = 15000
+        connection.readTimeout = 30000
+        connection.requestMethod = "GET"
+
+        var status = connection.responseCode
+        var redirects = 0
+
+        while ((status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                status == HttpURLConnection.HTTP_MOVED_PERM ||
+                status == HttpURLConnection.HTTP_SEE_OTHER ||
+                status == 307 || status == 308) && redirects < 5) {
+
+            val newUrlStr = connection.getHeaderField("Location") ?: break
+            connection.disconnect()
+
+            url = URL(newUrlStr)
+            connection = url.openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 15000
+            connection.readTimeout = 30000
+            connection.requestMethod = "GET"
+            status = connection.responseCode
+            redirects++
+        }
+
+        if (status != HttpURLConnection.HTTP_OK) {
+            throw IllegalArgumentException("Servidor respondeu com status $status ao baixar APK.")
+        }
+
+        return connection
+    }
+
     suspend fun baixarEInstalarApk(
         context: Context,
         urlApk: String,
@@ -73,23 +124,14 @@ object UpdateManager {
         onError: (Exception) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
-            val url = URL(urlApk)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
-            connection.requestMethod = "GET"
-            connection.connect()
-
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IllegalArgumentException("Erro de servidor HTTP ao baixar APK: ${connection.responseCode}")
-            }
-
+            val connection = abrirConexaoComRedirects(urlApk)
             val fileLength = connection.contentLength
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
-            val apkFile = File(downloadDir, "comav_update.apk")
+
+            val downloadDirApp = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
+            val apkFileApp = File(downloadDirApp, "comav_update.apk")
 
             connection.inputStream.use { input ->
-                FileOutputStream(apkFile).use { output ->
+                FileOutputStream(apkFileApp).use { output ->
                     val data = ByteArray(4096)
                     var total: Long = 0
                     var count: Int
@@ -105,13 +147,41 @@ object UpdateManager {
                 }
             }
 
+            // Copiar também para a pasta de Downloads pública do celular
+            try {
+                val publicDownloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (publicDownloadDir != null && publicDownloadDir.exists()) {
+                    val publicApk = File(publicDownloadDir, "COMAV_Cifras_atualizacao.apk")
+                    apkFileApp.copyTo(publicApk, overwrite = true)
+                }
+            } catch (_: Exception) {}
+
             withContext(Dispatchers.Main) {
-                onSucesso(apkFile)
-                instalarApk(context, apkFile)
+                onSucesso(apkFileApp)
+                instalarApk(context, apkFileApp)
             }
         } catch (e: Exception) {
+            // Em caso de qualquer falha na conexão direta, aciona o DownloadManager nativo do Android
+            try {
+                enfileirarDownloadManagerNativo(context, urlApk)
+            } catch (_: Exception) {}
             withContext(Dispatchers.Main) { onError(e) }
         }
+    }
+
+    private fun enfileirarDownloadManagerNativo(context: Context, urlApk: String) {
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return
+        val uri = Uri.parse(urlApk)
+
+        val request = DownloadManager.Request(uri).apply {
+            setTitle("COMAV Cifras - Nova Versão")
+            setDescription("Baixando atualização do aplicativo...")
+            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "COMAV_Cifras_atualizacao.apk")
+            setMimeType("application/vnd.android.package-archive")
+        }
+
+        downloadManager.enqueue(request)
     }
 
     fun instalarApk(context: Context, apkFile: File) {
