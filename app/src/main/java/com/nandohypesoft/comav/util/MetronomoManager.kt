@@ -12,6 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+enum class CompassoMetronomo(val maxBatidas: Int, val descricao: String) {
+    TERNARIO(3, "3/4 Ternário"),
+    QUATERNARIO(4, "4/4 Quaternário")
+}
+
 object MetronomoManager {
 
     private var toneGenerator: ToneGenerator? = try {
@@ -28,6 +33,9 @@ object MetronomoManager {
     private val _bpm = MutableStateFlow(120)
     val bpm: StateFlow<Int> = _bpm.asStateFlow()
 
+    private val _compasso = MutableStateFlow(CompassoMetronomo.QUATERNARIO)
+    val compasso: StateFlow<CompassoMetronomo> = _compasso.asStateFlow()
+
     private val _pulsoVisual = MutableStateFlow(false)
     val pulsoVisual: StateFlow<Boolean> = _pulsoVisual.asStateFlow()
 
@@ -38,6 +46,13 @@ object MetronomoManager {
 
     fun definirBpm(novoBpm: Int) {
         _bpm.value = novoBpm.coerceIn(30, 240)
+    }
+
+    fun definirCompasso(novoCompasso: CompassoMetronomo) {
+        _compasso.value = novoCompasso
+        if (_batidaAtual.value > novoCompasso.maxBatidas) {
+            _batidaAtual.value = 1
+        }
     }
 
     fun alternarMetronomo(scope: CoroutineScope) {
@@ -56,8 +71,9 @@ object MetronomoManager {
             while (isActive && _ativo.value) {
                 val intervaloMs = (60_000L / _bpm.value).coerceAtLeast(100L)
                 val batida = _batidaAtual.value
+                val maxBatidas = _compasso.value.maxBatidas
 
-                // Emitir tom e pulso visual
+                // Emitir tom sonoro de acento na 1ª batida e tom secundário nas demais
                 try {
                     if (batida == 1) {
                         toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, 50)
@@ -75,7 +91,7 @@ object MetronomoManager {
                     delay(restanteIntervalo)
                 }
 
-                _batidaAtual.value = if (batida >= 4) 1 else batida + 1
+                _batidaAtual.value = if (batida >= maxBatidas) 1 else batida + 1
             }
         }
     }

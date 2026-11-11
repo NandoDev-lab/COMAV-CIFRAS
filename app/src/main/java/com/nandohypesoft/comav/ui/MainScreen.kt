@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -57,6 +58,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import com.nandohypesoft.comav.util.TranspositorUtil
 import com.nandohypesoft.comav.ui.components.ChordDiagramDialog
 import com.nandohypesoft.comav.util.MetronomoManager
+import com.nandohypesoft.comav.util.CompassoMetronomo
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -434,6 +436,8 @@ fun MainScreen(viewModel: MainViewModel) {
         val metronomoAtivo by MetronomoManager.ativo.collectAsState()
         val metronomoBpm by MetronomoManager.bpm.collectAsState()
         val metronomoPulso by MetronomoManager.pulsoVisual.collectAsState()
+        val metronomoCompasso by MetronomoManager.compasso.collectAsState()
+        val metronomoBatida by MetronomoManager.batidaAtual.collectAsState()
 
         var acordeParaDiagrama by remember { mutableStateOf<String?>(null) }
         var ativarQuebraAutomatica by remember { mutableStateOf(false) }
@@ -774,78 +778,82 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Painel de Ferramentas de Leitura (Transposição + AutoScroll + Fonte)
+                    // Painel Organizado de Ferramentas de Leitura
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF181818) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Linha 1: Transposição de Tom e Tamanho de Fonte
+                            // Bloco 1: Tom & Tamanho da Fonte
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Transposição de Tom
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
                                         text = "Tom:",
-                                        fontSize = 13.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     OutlinedButton(
                                         onClick = { semitonsShift-- },
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.height(34.dp)
+                                        modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("-1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                        Text("-1", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
                                     }
                                     Text(
                                         text = if (semitonsShift == 0) "Original" else "${if (semitonsShift > 0) "+$semitonsShift" else semitonsShift}st",
-                                        fontSize = 13.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
                                     )
                                     OutlinedButton(
                                         onClick = { semitonsShift++ },
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.height(34.dp)
+                                        modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("+1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                        Text("+1", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
                                     }
                                     if (semitonsShift != 0) {
                                         TextButton(onClick = { semitonsShift = 0 }) {
-                                            Text("Reset", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                            Text("Reset", fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
                                         }
                                     }
                                 }
 
-                                // Tamanho da Fonte
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    Text(
+                                        text = "Fonte:",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     OutlinedButton(
                                         onClick = { viewModel.alterarEscala(escalaFonte - 0.1f) },
                                         enabled = escalaFonte > 0.71f,
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.height(34.dp)
+                                        modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("A−", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("A−", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Text(
                                         text = "${(escalaFonte * 100).toInt()}%",
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary
                                     )
@@ -853,14 +861,14 @@ fun MainScreen(viewModel: MainViewModel) {
                                         onClick = { viewModel.alterarEscala(escalaFonte + 0.1f) },
                                         enabled = escalaFonte < 1.81f,
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.height(34.dp)
+                                        modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("A+", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("A+", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
 
-                            // Linha 2: Rolagem Automática
+                            // Bloco 2: Rolagem Automática
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -868,7 +876,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             ) {
                                 IconButton(
                                     onClick = { autoScrollAtivo = !autoScrollAtivo },
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (autoScrollAtivo) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -879,7 +887,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 Text(
                                     text = "Auto-Scroll:",
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Bold,
                                     color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Slider(
@@ -899,66 +907,116 @@ fun MainScreen(viewModel: MainViewModel) {
                                 )
                             }
 
-                            // Linha 3: Metrônomo Integrado (BPM e Tap Tempo)
-                            Row(
+                            // Bloco 3: Metrônomo com 4 LEDs & Compasso (3/4 e 4/4)
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    IconButton(
-                                        onClick = { MetronomoManager.alternarMetronomo(coroutineScope) },
-                                        modifier = Modifier.size(34.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = if (metronomoAtivo) Icons.Default.Pause else Icons.Default.MusicNote,
-                                            contentDescription = "Metrônomo",
-                                            tint = if (metronomoAtivo) androidx.compose.ui.graphics.Color(0xFF4CAF50) else (if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(12.dp)
-                                            .background(
-                                                color = if (metronomoPulso) androidx.compose.ui.graphics.Color(0xFFFF5252) else androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.4f),
-                                                shape = androidx.compose.foundation.shape.CircleShape
+                                        IconButton(
+                                            onClick = { MetronomoManager.alternarMetronomo(coroutineScope) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (metronomoAtivo) Icons.Default.Pause else Icons.Default.MusicNote,
+                                                contentDescription = "Metrônomo",
+                                                tint = if (metronomoAtivo) androidx.compose.ui.graphics.Color(0xFF4CAF50) else (if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
                                             )
-                                    )
+                                        }
 
-                                    Text(
-                                        text = "${metronomoBpm} BPM",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                        Text(
+                                            text = "${metronomoBpm} BPM",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
 
-                                    OutlinedButton(
-                                        onClick = { MetronomoManager.definirBpm(metronomoBpm - 5) },
-                                        shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.height(30.dp)
-                                    ) {
-                                        Text("-5", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                        OutlinedButton(
+                                            onClick = { MetronomoManager.definirBpm(metronomoBpm - 5) },
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("-5", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { MetronomoManager.definirBpm(metronomoBpm + 5) },
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("+5", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
                                     }
 
                                     OutlinedButton(
-                                        onClick = { MetronomoManager.definirBpm(metronomoBpm + 5) },
+                                        onClick = { MetronomoManager.registrarTapTempo() },
                                         shape = RoundedCornerShape(6.dp),
                                         modifier = Modifier.height(30.dp)
                                     ) {
-                                        Text("+5", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                        Text("TAP TEMPO", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
                                     }
                                 }
 
-                                OutlinedButton(
-                                    onClick = { MetronomoManager.registrarTapTempo() },
-                                    shape = RoundedCornerShape(6.dp),
-                                    modifier = Modifier.height(30.dp)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("TAP TEMPO", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                    // Seletor de Compasso (3/4 vs 4/4)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        OutlinedButton(
+                                            onClick = { MetronomoManager.definirCompasso(CompassoMetronomo.TERNARIO) },
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(28.dp),
+                                            colors = if (metronomoCompasso == CompassoMetronomo.TERNARIO)
+                                                ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                            else ButtonDefaults.outlinedButtonColors()
+                                        ) {
+                                            Text("3/4 Ternário", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { MetronomoManager.definirCompasso(CompassoMetronomo.QUATERNARIO) },
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(28.dp),
+                                            colors = if (metronomoCompasso == CompassoMetronomo.QUATERNARIO)
+                                                ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                            else ButtonDefaults.outlinedButtonColors()
+                                        ) {
+                                            Text("4/4 Quaternário", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    // Display de 4 LEDs do Metrônomo
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val maxLeds = metronomoCompasso.maxBatidas
+                                        for (ledIdx in 1..4) {
+                                            val ledIncluso = (ledIdx <= maxLeds)
+                                            val ehBatidaAtual = (metronomoAtivo && metronomoBatida == ledIdx)
+                                            val corLed = when {
+                                                !ledIncluso -> androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.15f)
+                                                ehBatidaAtual && ledIdx == 1 -> androidx.compose.ui.graphics.Color(0xFFFF3D00) // 1ª Batida Acentuada (Vermelho)
+                                                ehBatidaAtual -> androidx.compose.ui.graphics.Color(0xFFFFC107) // Demais batidas (Amarelo/Âmbar)
+                                                else -> androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.4f)
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(14.dp)
+                                                    .background(corLed, CircleShape)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1054,6 +1112,47 @@ fun MainScreen(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
+                    val acordesDaMusica = remember(conteudoProcessado) {
+                        conteudoProcessado.split(Regex("\\s+"))
+                            .map { it.replace(Regex("[()\\[\\].,;:!?|]"), "").trim() }
+                            .filter { it.isNotBlank() && TranspositorUtil.ehAcorde(it) }
+                            .distinct()
+                    }
+
+                    if (acordesDaMusica.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🎸 Acordes (Toque para Diagrama):",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            acordesDaMusica.forEach { ac ->
+                                Surface(
+                                    onClick = { acordeParaDiagrama = ac },
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = ac,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
                     val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
 
                     Box(
@@ -1108,16 +1207,13 @@ fun MainScreen(viewModel: MainViewModel) {
                                                                 color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer
                                                             )
                                                         }
-                                                        SelectionContainer {
-                                                            Text(
-                                                                text = bloco.cifra,
-                                                                fontSize = (18 * escalaFonte).sp,
-                                                                lineHeight = (26 * escalaFonte).sp,
-                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
-                                                            )
-                                                        }
+                                                        LinhaCifraInteractive(
+                                                            linha = bloco.cifra,
+                                                            fontSizeSp = 18 * escalaFonte,
+                                                            isBold = true,
+                                                            modoPalco = modoPalcoAtivo,
+                                                            onAcordeClick = { acordeParaDiagrama = it }
+                                                        )
                                                     }
                                                 }
 
@@ -1155,22 +1251,35 @@ fun MainScreen(viewModel: MainViewModel) {
                             } else {
                                 itemsIndexed(linhasNormais) { index, linha ->
                                     val isHeader = secoes.any { it.indiceLinha == index }
-                                    SelectionContainer {
+                                    if (isHeader) {
                                         Text(
                                             text = if (linha.isEmpty()) " " else linha,
                                             fontSize = (18 * escalaFonte).sp,
                                             lineHeight = (28 * escalaFonte).sp,
-                                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                            fontWeight = FontWeight.Bold,
                                             fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
-                                            softWrap = !ehCifra,
-                                            color = if (isHeader) {
-                                                if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
-                                            } else {
-                                                if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
-                                            },
-                                            modifier = Modifier
-                                                .padding(vertical = if (isHeader) 4.dp else 1.dp)
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 4.dp)
                                         )
+                                    } else if (ehCifra) {
+                                        LinhaCifraInteractive(
+                                            linha = linha,
+                                            fontSizeSp = 18 * escalaFonte,
+                                            isBold = false,
+                                            modoPalco = modoPalcoAtivo,
+                                            onAcordeClick = { acordeParaDiagrama = it }
+                                        )
+                                    } else {
+                                        SelectionContainer {
+                                            Text(
+                                                text = if (linha.isEmpty()) " " else linha,
+                                                fontSize = (18 * escalaFonte).sp,
+                                                lineHeight = (28 * escalaFonte).sp,
+                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground,
+                                                modifier = Modifier.padding(vertical = 1.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1887,6 +1996,73 @@ fun ModoBuscaBotao(
                 fontWeight = if (ativo) FontWeight.Bold else FontWeight.Normal,
                 color = if (ativo) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun LinhaCifraInteractive(
+    linha: String,
+    fontSizeSp: Float,
+    isBold: Boolean,
+    modoPalco: Boolean,
+    onAcordeClick: (String) -> Unit
+) {
+    if (linha.isEmpty()) {
+        Text(text = " ", fontSize = fontSizeSp.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        return
+    }
+
+    val tokens = remember(linha) {
+        val list = mutableListOf<Pair<String, Boolean>>()
+        var i = 0
+        val n = linha.length
+        while (i < n) {
+            if (linha[i].isWhitespace()) {
+                val start = i
+                while (i < n && linha[i].isWhitespace()) i++
+                list.add(Pair(linha.substring(start, i), false))
+            } else {
+                val start = i
+                while (i < n && !linha[i].isWhitespace()) i++
+                val word = linha.substring(start, i)
+                val isChord = TranspositorUtil.ehAcorde(word.replace(Regex("[()\\[\\].,;:!?|]"), ""))
+                list.add(Pair(word, isChord))
+            }
+        }
+        list
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 1.dp)
+    ) {
+        tokens.forEach { (token, isChord) ->
+            if (isChord) {
+                Surface(
+                    onClick = { onAcordeClick(token) },
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (modoPalco) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 0.5.dp)
+                ) {
+                    Text(
+                        text = token,
+                        fontSize = fontSizeSp.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = if (modoPalco) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 0.5.dp)
+                    )
+                }
+            } else {
+                Text(
+                    text = token,
+                    fontSize = fontSizeSp.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                    color = if (modoPalco) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
     }
 }
