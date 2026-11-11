@@ -324,88 +324,101 @@ fun DesenharDiagramaViolao(posicao: PosicaoViolao) {
 @Composable
 fun DesenharDiagramaTeclado(posicao: PosicaoTeclado) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
-    // Oitava completa (12 notas: C C# D D# E F F# G G# A A# B)
-    val teclasBrancas = listOf(0, 2, 4, 5, 7, 9, 11) // C D E F G A B
-    // Teclas pretas: nota -> posição entre teclas brancas
-    val teclasPretas = listOf(
-        1 to 0, // C# entre C(0) e D(1)
-        3 to 1, // D# entre D(1) e E(2)
-        6 to 3, // F# entre F(3) e G(4)
-        8 to 4, // G# entre G(4) e A(5)
-        10 to 5 // A# entre A(5) e B(6)
+    // Mapeamento das 7 teclas brancas (0=C, 2=D, 4=E, 5=F, 7=G, 9=A, 11=B)
+    val whiteKeys = listOf(
+        0 to "C",
+        2 to "D",
+        4 to "E",
+        5 to "F",
+        7 to "G",
+        9 to "A",
+        11 to "B"
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(130.dp)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
+    // Mapeamento das 5 teclas pretas: nota -> boundaryIndex da linha entre teclas brancas
+    // boundaryIndex 1 = entre C(0) e D(1)
+    // boundaryIndex 2 = entre D(1) e E(2)
+    // boundaryIndex 4 = entre F(3) e G(4)
+    // boundaryIndex 5 = entre G(4) e A(5)
+    // boundaryIndex 6 = entre A(5) e B(6)
+    val blackKeys = listOf(
+        1 to 1,  // C# / Db
+        3 to 2,  // D# / Eb
+        6 to 4,  // F# / Gb
+        8 to 5,  // G# / Ab
+        10 to 6  // A# / Bb
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(vertical = 8.dp)
     ) {
-        // Renderizar Teclas Brancas
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            teclasBrancas.forEach { notaIndex ->
+        Canvas(modifier = Modifier.size(width = 240.dp, height = 110.dp)) {
+            val numWhite = 7
+            val wWidth = size.width / numWhite
+            val wHeight = size.height
+            val bWidth = wWidth * 0.58f
+            val bHeight = wHeight * 0.62f
+
+            // 1. Desenhar Teclas Brancas
+            whiteKeys.forEachIndexed { i, (notaIndex, _) ->
+                val left = i * wWidth
                 val estaPressionada = posicao.notas.contains(notaIndex)
-                Box(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(110.dp)
-                        .background(
-                            color = if (estaPressionada) primaryColor else Color.White,
-                            shape = RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp)
-                        )
-                        .padding(bottom = 8.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    if (estaPressionada) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(Color.White, CircleShape)
-                        )
-                    }
+
+                // Fundo da tecla branca
+                drawRect(
+                    color = if (estaPressionada) primaryColor else Color.White,
+                    topLeft = Offset(left + 1.dp.toPx(), 0f),
+                    size = Size(wWidth - 2.dp.toPx(), wHeight)
+                )
+
+                // Borda da tecla branca
+                drawRect(
+                    color = onSurfaceColor.copy(alpha = 0.4f),
+                    topLeft = Offset(left + 1.dp.toPx(), 0f),
+                    size = Size(wWidth - 2.dp.toPx(), wHeight),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+
+                // Ponto indicador se pressionada
+                if (estaPressionada) {
+                    drawCircle(
+                        color = Color.White,
+                        radius = 4.5.dp.toPx(),
+                        center = Offset(left + wWidth / 2f, wHeight - 14.dp.toPx())
+                    )
                 }
             }
-        }
 
-        // Renderizar Teclas Pretas sobrepostas
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            val teclaWidth = 32.dp
-            val gap = 2.dp
+            // 2. Desenhar Teclas Pretas
+            blackKeys.forEach { (notaIndex, boundaryIndex) ->
+                val estaPressionada = posicao.notas.contains(notaIndex)
+                val left = boundaryIndex * wWidth - bWidth / 2f
 
-            // Para posicionamento relativo preciso das 5 teclas pretas
-            val posicoesPretas = listOf(1, 2, 4, 5, 6) // Posição após a N-ésima tecla branca
+                // Fundo da tecla preta
+                drawRect(
+                    color = if (estaPressionada) primaryColor else Color(0xFF1E1E1E),
+                    topLeft = Offset(left, 0f),
+                    size = Size(bWidth, bHeight)
+                )
 
-            posicoesPretas.forEachIndexed { idx, posBranca ->
-                val (notaPretaIndex, _) = teclasPretas[idx]
-                val estaPressionada = posicao.notas.contains(notaPretaIndex)
+                // Borda da tecla preta
+                drawRect(
+                    color = Color.Black,
+                    topLeft = Offset(left, 0f),
+                    size = Size(bWidth, bHeight),
+                    style = Stroke(width = 1.dp.toPx())
+                )
 
-                Box(
-                    modifier = Modifier
-                        .padding(start = (posBranca * 34 - 10).dp)
-                        .width(20.dp)
-                        .height(65.dp)
-                        .background(
-                            color = if (estaPressionada) primaryColor else Color.Black,
-                            shape = RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp)
-                        ),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    if (estaPressionada) {
-                        Box(
-                            modifier = Modifier
-                                .padding(bottom = 6.dp)
-                                .size(8.dp)
-                                .background(Color.White, CircleShape)
-                        )
-                    }
+                // Ponto indicador se pressionada
+                if (estaPressionada) {
+                    drawCircle(
+                        color = Color.White,
+                        radius = 3.5.dp.toPx(),
+                        center = Offset(left + bWidth / 2f, bHeight - 10.dp.toPx())
+                    )
                 }
             }
         }
