@@ -125,6 +125,12 @@ class MainViewModel(
     private val _musicaAberta = MutableStateFlow<Musica?>(null)
     val musicaAberta: StateFlow<Musica?> = _musicaAberta.asStateFlow()
 
+    private val _playlistCulto = MutableStateFlow<List<Musica>>(emptyList())
+    val playlistCulto: StateFlow<List<Musica>> = _playlistCulto.asStateFlow()
+
+    private val _indicePlaylistCulto = MutableStateFlow(0)
+    val indicePlaylistCulto: StateFlow<Int> = _indicePlaylistCulto.asStateFlow()
+
     private val _visualizadorVisivel = MutableStateFlow(false)
     val visualizadorVisivel: StateFlow<Boolean> = _visualizadorVisivel.asStateFlow()
 
@@ -511,9 +517,32 @@ class MainViewModel(
         _editorVisivel.value = true
     }
 
-    fun abrirVisualizador(musica: Musica) {
+    fun abrirVisualizador(musica: Musica, playlist: List<Musica> = emptyList()) {
         _musicaAberta.value = musica
+        _playlistCulto.value = playlist
+        val idx = playlist.indexOfFirst { it.identificador == musica.identificador || it.titulo.equals(musica.titulo, ignoreCase = true) }
+        _indicePlaylistCulto.value = if (idx >= 0) idx else 0
         _visualizadorVisivel.value = true
+    }
+
+    fun proximaMusicaPlaylist() {
+        val list = _playlistCulto.value
+        val currIndex = _indicePlaylistCulto.value
+        if (list.isNotEmpty() && currIndex < list.size - 1) {
+            val nextIndex = currIndex + 1
+            _indicePlaylistCulto.value = nextIndex
+            _musicaAberta.value = list[nextIndex]
+        }
+    }
+
+    fun musicaAnteriorPlaylist() {
+        val list = _playlistCulto.value
+        val currIndex = _indicePlaylistCulto.value
+        if (list.isNotEmpty() && currIndex > 0) {
+            val prevIndex = currIndex - 1
+            _indicePlaylistCulto.value = prevIndex
+            _musicaAberta.value = list[prevIndex]
+        }
     }
 
     fun fecharVisualizador() {

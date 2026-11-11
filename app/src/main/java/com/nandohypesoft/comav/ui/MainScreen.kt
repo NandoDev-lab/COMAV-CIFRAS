@@ -424,6 +424,9 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // Modal Visualizador
     if (visualizadorVisivel && musicaAberta != null) {
+        val playlistCulto by viewModel.playlistCulto.collectAsState()
+        val indicePlaylistCulto by viewModel.indicePlaylistCulto.collectAsState()
+
         var ativarQuebraAutomatica by remember { mutableStateOf(false) }
         var modoTelaInteira by remember { mutableStateOf(false) }
         var semitonsShift by remember(musicaAberta!!.identificador) { mutableIntStateOf(0) }
@@ -564,7 +567,44 @@ fun MainScreen(viewModel: MainViewModel) {
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            if (playlistCulto.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF222222) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.musicaAnteriorPlaylist() },
+                                            enabled = indicePlaylistCulto > 0,
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(30.dp)
+                                        ) {
+                                            Text("⏮ Anterior", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                        }
+                                        Text(
+                                            text = "Setlist Culto: Música ${indicePlaylistCulto + 1} de ${playlistCulto.size}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                        )
+                                        OutlinedButton(
+                                            onClick = { viewModel.proximaMusicaPlaylist() },
+                                            enabled = indicePlaylistCulto < playlistCulto.size - 1,
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.height(30.dp)
+                                        ) {
+                                            Text("Próxima ⏭", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             val ehCifra = musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA
 
@@ -682,6 +722,43 @@ fun MainScreen(viewModel: MainViewModel) {
 
                             TextButton(onClick = { viewModel.fecharVisualizador() }) {
                                 Text("Fechar", color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    if (playlistCulto.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF222222) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.musicaAnteriorPlaylist() },
+                                    enabled = indicePlaylistCulto > 0,
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Text("⏮ Anterior", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                }
+                                Text(
+                                    text = "Setlist: Música ${indicePlaylistCulto + 1} de ${playlistCulto.size}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                )
+                                OutlinedButton(
+                                    onClick = { viewModel.proximaMusicaPlaylist() },
+                                    enabled = indicePlaylistCulto < playlistCulto.size - 1,
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Text("Próxima ⏭", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }

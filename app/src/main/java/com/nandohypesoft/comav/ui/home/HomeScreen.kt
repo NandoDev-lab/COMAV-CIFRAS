@@ -1287,6 +1287,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 } else {
+                                    val todasMusicas = viewModel.todasMusicas.collectAsState().value
+                                    val playlistDoCulto = remember(escala.itens, todasMusicas) {
+                                        escala.itens.mapNotNull { item ->
+                                            todasMusicas.find { m -> (item.identificadorMusica > 0 && m.identificador == item.identificadorMusica) || m.titulo.equals(item.tituloMusica, ignoreCase = true) }
+                                        }
+                                    }
+
                                     escala.itens.forEachIndexed { idx, item ->
                                         val extraTag = if (item.ehExtra) " [Extra]" else ""
                                         Surface(
@@ -1295,11 +1302,16 @@ fun HomeScreen(viewModel: MainViewModel) {
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    viewModel.atualizarConsulta(item.tituloMusica)
-                                                    if (tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO) {
-                                                        viewModel.navegarPara(TelaDestino.LISTA_CIFRAS)
+                                                    val musicaEncontrada = todasMusicas.find { m -> (item.identificadorMusica > 0 && m.identificador == item.identificadorMusica) || m.titulo.equals(item.tituloMusica, ignoreCase = true) }
+                                                    if (musicaEncontrada != null) {
+                                                        viewModel.abrirVisualizador(musicaEncontrada, playlistDoCulto)
                                                     } else {
-                                                        viewModel.navegarPara(TelaDestino.LISTA_LETRAS)
+                                                        viewModel.atualizarConsulta(item.tituloMusica)
+                                                        if (tipoFuncaoEquipe == TipoFuncaoEquipe.MUSICO) {
+                                                            viewModel.navegarPara(TelaDestino.LISTA_CIFRAS)
+                                                        } else {
+                                                            viewModel.navegarPara(TelaDestino.LISTA_LETRAS)
+                                                        }
                                                     }
                                                 }
                                         ) {
