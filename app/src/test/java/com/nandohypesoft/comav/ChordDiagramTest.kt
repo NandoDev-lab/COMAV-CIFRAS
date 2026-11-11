@@ -82,4 +82,13 @@ class ChordDiagramTest {
         assertEquals("Fá# + Lá + Ré", triadeD.formatarNotas(PosicaoInversao.PRIMEIRA_INVERSAO))
         assertEquals("Lá + Ré + Fá#", triadeD.formatarNotas(PosicaoInversao.SEGUNDA_INVERSAO))
     }
+
+    @Test
+    fun testSiMenorTresNotasVisiveisNoTeclado() {
+        val triadeBm = BaseDadosAcordes.obterNotasTriade("Bm")
+        val notasPos3 = triadeBm.obterNotasComOitavas(PosicaoInversao.SEGUNDA_INVERSAO)
+
+        assertEquals("Bm em 3ª Posição deve ter 3 notas", 3, notasPos3.size)
+        assertTrue("Todas as 3 notas de Bm em 3ª Posição devem caber no teclado de 2 oitavas (0..23)", notasPos3.all { it in 0..23 })
+    }
 }

@@ -68,17 +68,25 @@ data class TriadeNotas(val raiz: Int, val terca: Int, val quinta: Int) {
      * Retorna os índices das notas com deslocamento de oitava real no teclado de 2 oitavas (0..23).
      */
     fun obterNotasComOitavas(inversao: PosicaoInversao): List<Int> {
-        var n1 = raiz
+        val n1 = raiz
         var n2 = terca
         if (n2 < n1) n2 += 12
         var n3 = quinta
         while (n3 < n2) n3 += 12
 
-        return when (inversao) {
+        val bruto = when (inversao) {
             PosicaoInversao.FUNDAMENTAL -> listOf(n1, n2, n3)
             PosicaoInversao.PRIMEIRA_INVERSAO -> listOf(n2, n3, n1 + 12)
             PosicaoInversao.SEGUNDA_INVERSAO -> listOf(n3, n1 + 12, n2 + 12)
         }
+
+        val maxVal = bruto.maxOrNull() ?: 0
+        if (maxVal >= 24) {
+            val oitavasExcedentes = ((maxVal - 23 + 11) / 12) * 12
+            return bruto.map { it - oitavasExcedentes }
+        }
+
+        return bruto
     }
 
     fun formatarNotas(inversao: PosicaoInversao): String {
