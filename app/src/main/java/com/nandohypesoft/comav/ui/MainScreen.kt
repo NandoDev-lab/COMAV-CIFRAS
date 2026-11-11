@@ -42,6 +42,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
+import android.app.Activity
+import android.view.WindowManager
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import com.nandohypesoft.comav.util.TranspositorUtil
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -413,18 +426,62 @@ fun MainScreen(viewModel: MainViewModel) {
     if (visualizadorVisivel && musicaAberta != null) {
         var ativarQuebraAutomatica by remember { mutableStateOf(false) }
         var modoTelaInteira by remember { mutableStateOf(false) }
+        var semitonsShift by remember(musicaAberta!!.identificador) { mutableIntStateOf(0) }
+        var autoScrollAtivo by remember { mutableStateOf(false) }
+        var autoScrollVelocidade by remember { mutableFloatStateOf(30f) }
+        var modoPalcoAtivo by remember { mutableStateOf(false) }
+        var usoDuplaColunaTablet by remember { mutableStateOf(true) }
+
+        val currentContext = LocalContext.current
+        DisposableEffect(modoPalcoAtivo) {
+            var ctx = currentContext
+            var activityContext: Activity? = null
+            while (ctx is android.content.ContextWrapper) {
+                if (ctx is Activity) {
+                    activityContext = ctx
+                    break
+                }
+                ctx = ctx.baseContext
+            }
+
+            if (modoPalcoAtivo) {
+                activityContext?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                activityContext?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            onDispose {
+                activityContext?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+
+        val conteudoProcessado = remember(musicaAberta!!.conteudo, semitonsShift) {
+            if (semitonsShift == 0) musicaAberta!!.conteudo
+            else TranspositorUtil.transporConteudo(musicaAberta!!.conteudo, semitonsShift)
+        }
 
         if (modoTelaInteira) {
             val configuration = LocalConfiguration.current
             val screenWidthDp = configuration.screenWidthDp
-            val maxLineLength = remember(musicaAberta!!.conteudo) {
-                musicaAberta!!.conteudo.split("\n").maxOfOrNull { it.length } ?: 30
+            val ehTablet = screenWidthDp >= 600
+            val maxLineLength = remember(conteudoProcessado) {
+                conteudoProcessado.split("\n").maxOfOrNull { it.length } ?: 30
             }
             val autoFitScale = remember(maxLineLength, screenWidthDp) {
                 if (maxLineLength > 0) {
-                    (screenWidthDp.toFloat() / (maxLineLength * 9.5f)).coerceIn(0.4f, 1.8f)
+                    (screenWidthDp.toFloat() / (maxLineLength * 9.5f)).coerceIn(0.5f, 2.0f)
                 } else {
                     1.0f
+                }
+            }
+
+            val fullscreenScrollState = rememberScrollState()
+            LaunchedEffect(autoScrollAtivo, autoScrollVelocidade) {
+                if (autoScrollAtivo) {
+                    while (true) {
+                        kotlinx.coroutines.delay(40L)
+                        val delta = (autoScrollVelocidade * 0.04f).coerceAtLeast(0.5f)
+                        fullscreenScrollState.scrollBy(delta)
+                    }
                 }
             }
 
@@ -434,7 +491,7 @@ fun MainScreen(viewModel: MainViewModel) {
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF000000) else MaterialTheme.colorScheme.background
                 ) {
                     Box(
                         modifier = Modifier
@@ -449,19 +506,61 @@ fun MainScreen(viewModel: MainViewModel) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = musicaAberta!!.titulo,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.weight(1f)
-                                )
-                                OutlinedButton(
-                                    onClick = { modoTelaInteira = false },
-                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("Sair Tela Cheia", fontSize = 11.sp)
+                                    Text(
+                                        text = musicaAberta!!.titulo,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onBackground
+                                    )
+                                    if (semitonsShift != 0) {
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = " ${if (semitonsShift > 0) "+$semitonsShift" else "$semitonsShift"} semitons ",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Controls inside Fullscreen
+                                    IconButton(onClick = { autoScrollAtivo = !autoScrollAtivo }) {
+                                        Icon(
+                                            imageVector = if (autoScrollAtivo) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = "Auto Scroll",
+                                            tint = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    IconButton(onClick = { modoPalcoAtivo = !modoPalcoAtivo }) {
+                                        Icon(
+                                            imageVector = if (modoPalcoAtivo) Icons.Default.WbSunny else Icons.Default.Nightlight,
+                                            contentDescription = "Modo Palco",
+                                            tint = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { modoTelaInteira = false },
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Sair Tela Cheia", fontSize = 11.sp, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                    }
                                 }
                             }
 
@@ -473,16 +572,45 @@ fun MainScreen(viewModel: MainViewModel) {
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState()),
+                                    .verticalScroll(fullscreenScrollState),
                                 contentAlignment = Alignment.TopStart
                             ) {
-                                Text(
-                                    text = musicaAberta!!.conteudo,
-                                    fontSize = (18 * autoFitScale).sp,
-                                    lineHeight = (26 * autoFitScale).sp,
-                                    fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
+                                if (ehTablet && usoDuplaColunaTablet && ehCifra) {
+                                    val linhas = conteudoProcessado.split("\n")
+                                    val metade = (linhas.size + 1) / 2
+                                    val col1 = linhas.take(metade).joinToString("\n")
+                                    val col2 = linhas.drop(metade).joinToString("\n")
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        Text(
+                                            text = col1,
+                                            fontSize = (16 * autoFitScale).sp,
+                                            lineHeight = (24 * autoFitScale).sp,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = col2,
+                                            fontSize = (16 * autoFitScale).sp,
+                                            lineHeight = (24 * autoFitScale).sp,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = conteudoProcessado,
+                                        fontSize = (18 * autoFitScale).sp,
+                                        lineHeight = (26 * autoFitScale).sp,
+                                        fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+                                    )
+                                }
                             }
                         }
                     }
@@ -496,7 +624,7 @@ fun MainScreen(viewModel: MainViewModel) {
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
+                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF000000) else MaterialTheme.colorScheme.background
             ) {
                 Column(
                     modifier = Modifier
@@ -514,13 +642,14 @@ fun MainScreen(viewModel: MainViewModel) {
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onBackground
                             )
                             val tipoTexto = if (musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA) "Cifra" else "Letra"
                             Text(
                                 text = tipoTexto,
                                 fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFCCCCCC) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -529,77 +658,164 @@ fun MainScreen(viewModel: MainViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(
+                                onClick = { modoPalcoAtivo = !modoPalcoAtivo },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = if (modoPalcoAtivo) "Palco ON" else "Palco OFF",
+                                    fontSize = 12.sp,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            OutlinedButton(
                                 onClick = { modoTelaInteira = true },
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Tela Cheia", fontSize = 12.sp)
+                                Text("Tela Cheia", fontSize = 12.sp, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
                             }
                             OutlinedButton(
                                 onClick = { mostrarModoProjetor = true },
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Transmitir", fontSize = 12.sp)
+                                Text("Transmitir", fontSize = 12.sp, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
                             }
 
                             TextButton(onClick = { viewModel.fecharVisualizador() }) {
-                                Text("Fechar")
+                                Text("Fechar", color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Controles de Fonte na Leitura (Letras e Cifras)
+                    // Painel de Ferramentas de Leitura (Transposição + AutoScroll + Fonte)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "Tamanho da fonte:",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
+                            // Linha 1: Transposição de Tom e Tamanho de Fonte
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Transposição de Tom
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Tom:",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    OutlinedButton(
+                                        onClick = { semitonsShift-- },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text("-1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                    }
+                                    Text(
+                                        text = if (semitonsShift == 0) "Original" else "${if (semitonsShift > 0) "+$semitonsShift" else semitonsShift}st",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                    )
+                                    OutlinedButton(
+                                        onClick = { semitonsShift++ },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text("+1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (semitonsShift != 0) {
+                                        TextButton(onClick = { semitonsShift = 0 }) {
+                                            Text("Reset", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+
+                                // Tamanho da Fonte
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.alterarEscala(escalaFonte - 0.1f) },
+                                        enabled = escalaFonte > 0.71f,
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text("A−", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text(
+                                        text = "${(escalaFonte * 100).toInt()}%",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary
+                                    )
+                                    OutlinedButton(
+                                        onClick = { viewModel.alterarEscala(escalaFonte + 0.1f) },
+                                        enabled = escalaFonte < 1.81f,
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text("A+", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // Linha 2: Rolagem Automática
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                OutlinedButton(
-                                    onClick = { viewModel.alterarEscala(escalaFonte - 0.1f) },
-                                    enabled = escalaFonte > 0.71f,
-                                    shape = RoundedCornerShape(8.dp)
+                                IconButton(
+                                    onClick = { autoScrollAtivo = !autoScrollAtivo },
+                                    modifier = Modifier.size(36.dp)
                                 ) {
-                                    Text("A−", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = if (autoScrollAtivo) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = "Auto Scroll",
+                                        tint = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                    )
                                 }
-
                                 Text(
-                                    text = "${(escalaFonte * 100).toInt()}%",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = "Auto-Scroll:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-
-                                OutlinedButton(
-                                    onClick = { viewModel.alterarEscala(escalaFonte + 0.1f) },
-                                    enabled = escalaFonte < 1.81f,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text("A+", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Slider(
+                                    value = autoScrollVelocidade,
+                                    onValueChange = { autoScrollVelocidade = it },
+                                    valueRange = 10f..100f,
+                                    modifier = Modifier.weight(1f),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Text(
+                                    text = "${autoScrollVelocidade.toInt()} px/s",
+                                    fontSize = 11.sp,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFCCCCCC) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Toggle Quebra Automática C(n)/L(n)
                     Row(
@@ -613,7 +829,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             text = "Modo Quebra Automática C(n)/L(n):",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = ativarQuebraAutomatica,
@@ -626,24 +842,34 @@ fun MainScreen(viewModel: MainViewModel) {
                     val configuration = LocalConfiguration.current
                     val screenWidthDp = configuration.screenWidthDp
 
-                    val blocos = remember(musicaAberta!!.conteudo, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
+                    val blocos = remember(conteudoProcessado, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
                         if (ativarQuebraAutomatica) {
                             val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, 45)
-                            QuebraAutomatica.quebraInteligente(musicaAberta!!.conteudo, maxChars = maxC)
+                            QuebraAutomatica.quebraInteligente(conteudoProcessado, maxChars = maxC)
                         } else {
                             emptyList()
                         }
                     }
-                    val linhasNormais = remember(musicaAberta!!.conteudo) { musicaAberta!!.conteudo.split("\n") }
-                    val secoes = remember(musicaAberta!!.conteudo) { detectarSecoesCifra(musicaAberta!!.conteudo) }
+                    val linhasNormais = remember(conteudoProcessado) { conteudoProcessado.split("\n") }
+                    val secoes = remember(conteudoProcessado) { detectarSecoesCifra(conteudoProcessado) }
                     val listState = rememberLazyListState()
                     val coroutineScope = rememberCoroutineScope()
+
+                    LaunchedEffect(autoScrollAtivo, autoScrollVelocidade) {
+                        if (autoScrollAtivo) {
+                            while (true) {
+                                kotlinx.coroutines.delay(40L)
+                                val delta = (autoScrollVelocidade * 0.04f).coerceAtLeast(0.5f)
+                                listState.scrollBy(delta)
+                            }
+                        }
+                    }
 
                     if (secoes.isNotEmpty()) {
                         Text(
                             text = "Atalhos rápidos:",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         FlowRow(
@@ -659,7 +885,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                         }
                                     },
                                     shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer,
                                     modifier = Modifier.height(32.dp)
                                 ) {
                                     Box(
@@ -670,7 +896,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                             text = secao.titulo,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     }
                                 }
@@ -698,7 +924,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                             text = bloco.cifra,
                                             fontSize = (20 * escalaFonte).sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.padding(vertical = 6.dp)
                                         )
                                     } else if (bloco.cifra.isBlank() && bloco.letra.isBlank()) {
@@ -706,7 +932,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     } else {
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(vertical = 3.dp)
@@ -724,13 +950,13 @@ fun MainScreen(viewModel: MainViewModel) {
                                                     ) {
                                                         Surface(
                                                             shape = RoundedCornerShape(4.dp),
-                                                            color = MaterialTheme.colorScheme.primaryContainer
+                                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
                                                         ) {
                                                             Text(
                                                                 text = " C(${bloco.indice}) ",
                                                                 fontSize = (11 * escalaFonte).sp,
                                                                 fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer
                                                             )
                                                         }
                                                         SelectionContainer {
@@ -740,7 +966,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                                                 lineHeight = (26 * escalaFonte).sp,
                                                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                                                 fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.primary
+                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
                                                             )
                                                         }
                                                     }
@@ -753,13 +979,13 @@ fun MainScreen(viewModel: MainViewModel) {
                                                     ) {
                                                         Surface(
                                                             shape = RoundedCornerShape(4.dp),
-                                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF222222) else MaterialTheme.colorScheme.secondaryContainer
                                                         ) {
                                                             Text(
                                                                 text = " L(${bloco.indice}) ",
                                                                 fontSize = (11 * escalaFonte).sp,
                                                                 fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFE0E0E0) else MaterialTheme.colorScheme.onSecondaryContainer
                                                             )
                                                         }
                                                         SelectionContainer {
@@ -768,7 +994,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                                                 fontSize = (18 * escalaFonte).sp,
                                                                 lineHeight = (26 * escalaFonte).sp,
                                                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                                                color = MaterialTheme.colorScheme.onBackground
+                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
                                                             )
                                                         }
                                                     }
@@ -788,7 +1014,11 @@ fun MainScreen(viewModel: MainViewModel) {
                                             fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
                                             fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
                                             softWrap = !ehCifra,
-                                            color = if (isHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                            color = if (isHeader) {
+                                                if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                            } else {
+                                                if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+                                            },
                                             modifier = Modifier
                                                 .padding(vertical = if (isHeader) 4.dp else 1.dp)
                                         )
