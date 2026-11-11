@@ -55,6 +55,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import com.nandohypesoft.comav.util.TranspositorUtil
+import com.nandohypesoft.comav.ui.components.ChordDiagramDialog
+import com.nandohypesoft.comav.util.MetronomoManager
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -424,9 +427,15 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // Modal Visualizador
     if (visualizadorVisivel && musicaAberta != null) {
+        val coroutineScope = rememberCoroutineScope()
         val playlistCulto by viewModel.playlistCulto.collectAsState()
         val indicePlaylistCulto by viewModel.indicePlaylistCulto.collectAsState()
 
+        val metronomoAtivo by MetronomoManager.ativo.collectAsState()
+        val metronomoBpm by MetronomoManager.bpm.collectAsState()
+        val metronomoPulso by MetronomoManager.pulsoVisual.collectAsState()
+
+        var acordeParaDiagrama by remember { mutableStateOf<String?>(null) }
         var ativarQuebraAutomatica by remember { mutableStateOf(false) }
         var modoTelaInteira by remember { mutableStateOf(false) }
         var semitonsShift by remember(musicaAberta!!.identificador) { mutableIntStateOf(0) }
@@ -889,6 +898,69 @@ fun MainScreen(viewModel: MainViewModel) {
                                     color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFCCCCCC) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+
+                            // Linha 3: Metrônomo Integrado (BPM e Tap Tempo)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    IconButton(
+                                        onClick = { MetronomoManager.alternarMetronomo(coroutineScope) },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (metronomoAtivo) Icons.Default.Pause else Icons.Default.MusicNote,
+                                            contentDescription = "Metrônomo",
+                                            tint = if (metronomoAtivo) androidx.compose.ui.graphics.Color(0xFF4CAF50) else (if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .background(
+                                                color = if (metronomoPulso) androidx.compose.ui.graphics.Color(0xFFFF5252) else androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.4f),
+                                                shape = androidx.compose.foundation.shape.CircleShape
+                                            )
+                                    )
+
+                                    Text(
+                                        text = "${metronomoBpm} BPM",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    OutlinedButton(
+                                        onClick = { MetronomoManager.definirBpm(metronomoBpm - 5) },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(30.dp)
+                                    ) {
+                                        Text("-5", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { MetronomoManager.definirBpm(metronomoBpm + 5) },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(30.dp)
+                                    ) {
+                                        Text("+5", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+
+                                OutlinedButton(
+                                    onClick = { MetronomoManager.registrarTapTempo() },
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Text("TAP TEMPO", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary)
+                                }
+                            }
                         }
                     }
 
@@ -1119,6 +1191,13 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 }
             }
+        }
+
+        if (acordeParaDiagrama != null) {
+            ChordDiagramDialog(
+                nomeAcorde = acordeParaDiagrama!!,
+                onDismissRequest = { acordeParaDiagrama = null }
+            )
         }
     }
 
