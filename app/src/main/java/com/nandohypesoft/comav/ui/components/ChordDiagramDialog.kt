@@ -55,11 +55,19 @@ data class PosicaoTeclado(
 object BaseDadosAcordes {
     val ACORDES_VIOLAO = mapOf(
         "C" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 1, 0)),
+        "C#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "C#m" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "Db" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "Dbm" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Cm" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "C7" to PosicaoViolao(cordas = listOf(-1, 3, 2, 3, 1, 0)),
         "Cadd9" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 3, 3)),
         "Cmaj7" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 0, 0)),
         "D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 2)),
+        "D#" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "D#m" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "Eb" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "Ebm" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Dm" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 1)),
         "D7" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 1, 2)),
         "Dsus4" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 3)),
@@ -69,14 +77,21 @@ object BaseDadosAcordes {
         "E7" to PosicaoViolao(cordas = listOf(0, 2, 0, 1, 0, 0)),
         "F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "Fm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 3, 3, 1, 1, 1)),
+        "F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "F#m" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 1, 1, 1)),
         "F#m7" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 1, 1, 1, 1)),
+        "Gb" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "G" to PosicaoViolao(cordas = listOf(3, 2, 0, 0, 0, 3)),
+        "G#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1)),
+        "G#m" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 1, 1, 1)),
+        "Ab" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "G/B" to PosicaoViolao(cordas = listOf(-1, 2, 0, 0, 3, 3)),
         "Gm" to PosicaoViolao(pestanaFret = 3, cordas = listOf(1, 3, 3, 1, 1, 1)),
         "G7" to PosicaoViolao(cordas = listOf(3, 2, 0, 0, 0, 1)),
         "Gadd9" to PosicaoViolao(cordas = listOf(3, 2, 0, 2, 0, 3)),
         "A" to PosicaoViolao(cordas = listOf(-1, 0, 2, 2, 2, 0)),
+        "A#" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "A#m" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Am" to PosicaoViolao(cordas = listOf(-1, 0, 2, 2, 1, 0)),
         "A7" to PosicaoViolao(cordas = listOf(-1, 0, 2, 0, 2, 0)),
         "Am7" to PosicaoViolao(cordas = listOf(-1, 0, 2, 0, 1, 0)),
@@ -85,18 +100,24 @@ object BaseDadosAcordes {
         "Bm" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Bm7" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 1, 2, 1)),
         "Bb" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "Bbm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1)),
-        "Eb" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "Ab" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1))
+        "Bbm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1))
     )
 
     val ACORDES_TECLADO = mapOf(
         "C" to PosicaoTeclado(notas = listOf(0, 4, 7)),
+        "C#" to PosicaoTeclado(notas = listOf(1, 5, 8)),
+        "C#m" to PosicaoTeclado(notas = listOf(1, 4, 8)),
+        "Db" to PosicaoTeclado(notas = listOf(1, 5, 8)),
+        "Dbm" to PosicaoTeclado(notas = listOf(1, 4, 8)),
         "Cm" to PosicaoTeclado(notas = listOf(0, 3, 7)),
         "C7" to PosicaoTeclado(notas = listOf(0, 4, 7, 10)),
         "Cadd9" to PosicaoTeclado(notas = listOf(0, 2, 4, 7)),
         "Cmaj7" to PosicaoTeclado(notas = listOf(0, 4, 7, 11)),
         "D" to PosicaoTeclado(notas = listOf(2, 6, 9)),
+        "D#" to PosicaoTeclado(notas = listOf(3, 7, 10)),
+        "D#m" to PosicaoTeclado(notas = listOf(3, 6, 10)),
+        "Eb" to PosicaoTeclado(notas = listOf(3, 7, 10)),
+        "Ebm" to PosicaoTeclado(notas = listOf(3, 6, 10)),
         "Dm" to PosicaoTeclado(notas = listOf(2, 5, 9)),
         "D7" to PosicaoTeclado(notas = listOf(2, 6, 9, 0)),
         "D/F#" to PosicaoTeclado(notas = listOf(6, 9, 2)),
@@ -104,12 +125,19 @@ object BaseDadosAcordes {
         "Em" to PosicaoTeclado(notas = listOf(4, 7, 11)),
         "F" to PosicaoTeclado(notas = listOf(5, 9, 0)),
         "Fm" to PosicaoTeclado(notas = listOf(5, 8, 0)),
+        "F#" to PosicaoTeclado(notas = listOf(6, 10, 1)),
         "F#m" to PosicaoTeclado(notas = listOf(6, 9, 1)),
         "F#m7" to PosicaoTeclado(notas = listOf(6, 9, 1, 4)),
+        "Gb" to PosicaoTeclado(notas = listOf(6, 10, 1)),
         "G" to PosicaoTeclado(notas = listOf(7, 11, 2)),
+        "G#" to PosicaoTeclado(notas = listOf(8, 0, 3)),
+        "G#m" to PosicaoTeclado(notas = listOf(8, 11, 3)),
+        "Ab" to PosicaoTeclado(notas = listOf(8, 0, 3)),
         "G/B" to PosicaoTeclado(notas = listOf(11, 2, 7)),
         "Gm" to PosicaoTeclado(notas = listOf(7, 10, 2)),
         "A" to PosicaoTeclado(notas = listOf(9, 1, 4)),
+        "A#" to PosicaoTeclado(notas = listOf(10, 2, 5)),
+        "A#m" to PosicaoTeclado(notas = listOf(10, 1, 5)),
         "Am" to PosicaoTeclado(notas = listOf(9, 0, 4)),
         "Am7" to PosicaoTeclado(notas = listOf(9, 0, 4, 7)),
         "A/C#" to PosicaoTeclado(notas = listOf(1, 4, 9)),
@@ -119,23 +147,45 @@ object BaseDadosAcordes {
         "Bb" to PosicaoTeclado(notas = listOf(10, 2, 5)),
         "Bbm" to PosicaoTeclado(notas = listOf(10, 1, 5)),
         "Eb" to PosicaoTeclado(notas = listOf(3, 7, 10)),
-        "Ab" to PosicaoTeclado(notas = listOf(8, 0, 3))
+        "Ebm" to PosicaoTeclado(notas = listOf(3, 6, 10))
     )
 
     fun buscarPosicaoViolao(acorde: String): PosicaoViolao? {
         val limpo = acorde.trim()
-        return ACORDES_VIOLAO[limpo]
-            ?: ACORDES_VIOLAO[limpo.takeWhile { it != '/' }]
-            ?: ACORDES_VIOLAO[limpo.replace(Regex("\\d|add|maj|sus"), "")]
-            ?: ACORDES_VIOLAO[limpo.take(1)]
+        val semBarra = limpo.takeWhile { it != '/' }
+
+        // 1. Tentar acorde exato (ex: C#m7)
+        ACORDES_VIOLAO[limpo]?.let { return it }
+        // 2. Tentar sem o baixo (ex: G/B -> G)
+        ACORDES_VIOLAO[semBarra]?.let { return it }
+
+        // 3. Tentar preservando o acidente # ou b (ex: C#m7 -> C#m ou C#)
+        val temAcidente = semBarra.length >= 2 && (semBarra[1] == '#' || semBarra[1] == 'b')
+        val notaComAcidente = if (temAcidente) semBarra.take(2) else semBarra.take(1)
+        val raizComModificador = if (temAcidente && semBarra.length >= 3 && semBarra[2] == 'm') semBarra.take(3)
+        else if (!temAcidente && semBarra.length >= 2 && semBarra[1] == 'm') semBarra.take(2)
+        else notaComAcidente
+
+        return ACORDES_VIOLAO[raizComModificador] ?: ACORDES_VIOLAO[notaComAcidente]
     }
 
     fun buscarPosicaoTeclado(acorde: String): PosicaoTeclado? {
         val limpo = acorde.trim()
-        return ACORDES_TECLADO[limpo]
-            ?: ACORDES_TECLADO[limpo.takeWhile { it != '/' }]
-            ?: ACORDES_TECLADO[limpo.replace(Regex("\\d|add|maj|sus"), "")]
-            ?: ACORDES_TECLADO[limpo.take(1)]
+        val semBarra = limpo.takeWhile { it != '/' }
+
+        // 1. Tentar acorde exato (ex: C#m7)
+        ACORDES_TECLADO[limpo]?.let { return it }
+        // 2. Tentar sem o baixo (ex: G/B -> G)
+        ACORDES_TECLADO[semBarra]?.let { return it }
+
+        // 3. Tentar preservando o acidente # ou b (ex: C#m7 -> C#m ou C#)
+        val temAcidente = semBarra.length >= 2 && (semBarra[1] == '#' || semBarra[1] == 'b')
+        val notaComAcidente = if (temAcidente) semBarra.take(2) else semBarra.take(1)
+        val raizComModificador = if (temAcidente && semBarra.length >= 3 && semBarra[2] == 'm') semBarra.take(3)
+        else if (!temAcidente && semBarra.length >= 2 && semBarra[1] == 'm') semBarra.take(2)
+        else notaComAcidente
+
+        return ACORDES_TECLADO[raizComModificador] ?: ACORDES_TECLADO[notaComAcidente]
     }
 }
 
