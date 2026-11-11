@@ -156,16 +156,31 @@ object BaseDadosAcordes {
         "Am/C" to PosicaoViolao(cordas = listOf(-1, 3, 2, 2, 1, 0)),
         "Am/E" to PosicaoViolao(cordas = listOf(0, 0, 2, 2, 1, 0)),
 
-        // B / Bb
+        // B / Bb / Eb / Ab / Db / A# / G# / F# / D# / C#
         "B" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 3, 3, 1)),
         "B/D#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 3, 1, 1, 1, 1)),
         "B/F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 1, 3, 3, 3, 1)),
         "Bm" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Bm/D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 4, 3, 2)),
         "Bm/F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 1, 3, 3, 2, 1)),
+
         "Bb" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "Bbm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Bb/D" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 3, 1, 1, 1, 1)),
-        "Bb/F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 1, 3, 3, 3, 1))
+        "Bb/F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 1, 3, 3, 3, 1)),
+
+        "A#" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "A#m" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+
+        "Eb" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
+        "Ebm" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "Eb/G" to PosicaoViolao(pestanaFret = 3, cordas = listOf(1, 3, 3, 3, 1, 1)),
+        "Eb/Bb" to PosicaoViolao(pestanaFret = 6, cordas = listOf(1, 1, 3, 3, 3, 1)),
+
+        "Ab" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1)),
+        "Abm" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 1, 1, 1)),
+        "Ab/C" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "Ab/Eb" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 3, 1))
     )
 
     fun obterNotasTriade(acorde: String): TriadeNotas {
@@ -196,9 +211,15 @@ object BaseDadosAcordes {
         val notaBaixoNome = nomesNotasPt[nomesInversao[0] % 12]
 
         val chaveInversao = if (inversao == PosicaoInversao.FUNDAMENTAL) semBarra else "$semBarra/$notaBaixoNome"
+        val chaveEnharmonica = if (inversao == PosicaoInversao.FUNDAMENTAL) 
+            semBarra.replace("G#", "Ab").replace("D#", "Eb").replace("Db", "C#").replace("Gb", "F#").replace("A#", "Bb")
+        else 
+            "$semBarra/$notaBaixoNome".replace("G#", "Ab").replace("D#", "Eb").replace("Db", "C#").replace("Gb", "F#").replace("A#", "Bb")
 
         val posicaoEncontrada = ACORDES_VIOLAO[chaveInversao]
+            ?: ACORDES_VIOLAO[chaveEnharmonica]
             ?: ACORDES_VIOLAO[semBarra]
+            ?: ACORDES_VIOLAO[semBarra.replace("G#", "Ab").replace("D#", "Eb").replace("Db", "C#").replace("Gb", "F#").replace("A#", "Bb")]
             ?: ACORDES_VIOLAO[semBarra.take(if (semBarra.length >= 2 && (semBarra[1] == '#' || semBarra[1] == 'b')) 2 else 1)]
 
         if (posicaoEncontrada != null && inversao != PosicaoInversao.FUNDAMENTAL && !ACORDES_VIOLAO.containsKey(chaveInversao)) {
