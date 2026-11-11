@@ -59,6 +59,7 @@ import com.nandohypesoft.comav.util.TranspositorUtil
 import com.nandohypesoft.comav.ui.components.ChordDiagramDialog
 import com.nandohypesoft.comav.util.MetronomoManager
 import com.nandohypesoft.comav.util.CompassoMetronomo
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -683,59 +684,104 @@ fun MainScreen(viewModel: MainViewModel) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Cabeçalho Limpo e Espaçoso do Visualizador (Linha 1: Título + Badge + Fechar X; Linha 2: Botões de Ação)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Nº ${musicaAberta!!.identificador} · ${musicaAberta!!.titulo}",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onBackground
-                            )
-                            val tipoTexto = if (musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA) "Cifra" else "Letra"
-                            Text(
-                                text = tipoTexto,
-                                fontSize = 14.sp,
-                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFCCCCCC) else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Nº ${musicaAberta!!.identificador} · ${musicaAberta!!.titulo}",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = if (musicaAberta!!.tipoDeConteudo == TipoDeConteudo.CIFRA) " Cifra " else " Letra ",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { viewModel.fecharVisualizador() },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Fechar",
+                                    tint = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onBackground
+                                )
+                            }
                         }
 
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(
                                 onClick = { modoPalcoAtivo = !modoPalcoAtivo },
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(32.dp).weight(1f)
                             ) {
                                 Text(
-                                    text = if (modoPalcoAtivo) "Palco ON" else "Palco OFF",
-                                    fontSize = 12.sp,
+                                    text = if (modoPalcoAtivo) "🌙 Palco ON" else "🌙 Palco OFF",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
                                 )
                             }
+
                             OutlinedButton(
                                 onClick = { modoTelaInteira = true },
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(32.dp).weight(1f)
                             ) {
-                                Text("Tela Cheia", fontSize = 12.sp, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
-                            }
-                            OutlinedButton(
-                                onClick = { mostrarModoProjetor = true },
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Transmitir", fontSize = 12.sp, color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                                Text(
+                                    text = "⛶ Tela Cheia",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary
+                                )
                             }
 
-                            TextButton(onClick = { viewModel.fecharVisualizador() }) {
-                                Text("Fechar", color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary)
+                            OutlinedButton(
+                                onClick = { mostrarModoProjetor = true },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(32.dp).weight(1f)
+                            ) {
+                                Text(
+                                    text = "📡 Transmitir",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
