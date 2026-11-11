@@ -860,15 +860,17 @@ fun MainScreen(viewModel: MainViewModel) {
                                     }
                                 }
 
-                                TextButton(
+                                Surface(
                                     onClick = { painelFerramentasExpandido = !painelFerramentasExpandido },
-                                    modifier = Modifier.height(28.dp)
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
                                 ) {
                                     Text(
-                                        text = if (painelFerramentasExpandido) "⚙️ Ocultar ▼" else "⚙️ Ferramentas ▲",
+                                        text = if (painelFerramentasExpandido) " ⚙️ Ocultar ▼ " else " ⚙️ Ferramentas ▲ ",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary
+                                        color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                                     )
                                 }
                             }
@@ -1247,56 +1249,24 @@ fun MainScreen(viewModel: MainViewModel) {
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 if (bloco.cifra.isNotBlank()) {
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                    ) {
-                                                        Surface(
-                                                            shape = RoundedCornerShape(4.dp),
-                                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF332B00) else MaterialTheme.colorScheme.primaryContainer
-                                                        ) {
-                                                            Text(
-                                                                text = " C(${bloco.indice}) ",
-                                                                fontSize = (11 * escalaFonte).sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.onPrimaryContainer
-                                                            )
-                                                        }
-                                                        LinhaCifraInteractive(
-                                                            linha = bloco.cifra,
-                                                            fontSizeSp = 18 * escalaFonte,
-                                                            isBold = true,
-                                                            modoPalco = modoPalcoAtivo,
-                                                            onAcordeClick = { acordeParaDiagrama = it }
-                                                        )
-                                                    }
+                                                    LinhaCifraInteractive(
+                                                        linha = bloco.cifra,
+                                                        fontSizeSp = 18 * escalaFonte,
+                                                        isBold = true,
+                                                        modoPalco = modoPalcoAtivo,
+                                                        onAcordeClick = { acordeParaDiagrama = it }
+                                                    )
                                                 }
 
                                                 if (bloco.letra.isNotBlank()) {
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                    ) {
-                                                        Surface(
-                                                            shape = RoundedCornerShape(4.dp),
-                                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFF222222) else MaterialTheme.colorScheme.secondaryContainer
-                                                        ) {
-                                                            Text(
-                                                                text = " L(${bloco.indice}) ",
-                                                                fontSize = (11 * escalaFonte).sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFE0E0E0) else MaterialTheme.colorScheme.onSecondaryContainer
-                                                            )
-                                                        }
-                                                        SelectionContainer {
-                                                            Text(
-                                                                text = bloco.letra,
-                                                                fontSize = (18 * escalaFonte).sp,
-                                                                lineHeight = (26 * escalaFonte).sp,
-                                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                                                color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
-                                                            )
-                                                        }
+                                                    SelectionContainer {
+                                                        Text(
+                                                            text = bloco.letra,
+                                                            fontSize = (18 * escalaFonte).sp,
+                                                            lineHeight = (26 * escalaFonte).sp,
+                                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                            color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+                                                        )
                                                     }
                                                 }
                                             }

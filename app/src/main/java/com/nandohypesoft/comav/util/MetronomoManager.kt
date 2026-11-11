@@ -1,7 +1,9 @@
 package com.nandohypesoft.comav.util
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
 import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.sin
 
 enum class CompassoMetronomo(val maxBatidas: Int, val descricao: String) {
     TERNARIO(3, "3/4 Ternário"),
@@ -19,11 +22,14 @@ enum class CompassoMetronomo(val maxBatidas: Int, val descricao: String) {
 
 object MetronomoManager {
 
-    private var toneGenerator: ToneGenerator? = try {
-        ToneGenerator(AudioManager.STREAM_MUSIC, 80)
-    } catch (_: Exception) {
-        null
-    }
+    private const val SAMPLE_RATE = 44100
+
+    // Buffers PCM de áudio sintético para som de clique de metrônomo real (Woodblock/Click)
+    private val pcmForte: ShortArray by lazy { gerarPcmClick(freq = 1500.0, duracaoMs = 15) }
+    private val pcmFraco: ShortArray by lazy { gerarPcmClick(freq = 850.0, duracaoMs = 12) }
+
+    private var audioTrackForte: AudioTrack? = null
+    private var audioTrackFraco: AudioTrack? = null
 
     private var metronomoJob: Job? = null
 
@@ -43,6 +49,61 @@ object MetronomoManager {
     val batidaAtual: StateFlow<Int> = _batidaAtual.asStateFlow()
 
     private val tapTimestamps = mutableListOf<Long>()
+
+    private fun inicializarAudio() {
+        if (audioTrackForte != null && audioTrackFraco != null) return
+
+        try {
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+
+            val audioFormat = AudioFormat.Builder()
+                .setSampleRate(SAMPLE_RATE)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+
+            audioTrackForte = AudioTrack(
+                audioAttributes, audioFormat, pcmForte.size * 2,
+                AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE
+            ).apply {
+                write(pcmForte, 0, pcmForte.size)
+            }
+
+            audioTrackFraco = AudioTrack(
+                audioAttributes, audioFormat, pcmFraco.size * 2,
+                AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE
+            ).apply {
+                write(pcmFraco, 0, pcmFraco.size)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun tocarClique(forte: Boolean) {
+        inicializarAudio()
+        val track = if (forte) audioTrackForte else audioTrackFraco
+        try {
+            track?.stop()
+            track?.reloadStaticData()
+            track?.play()
+        } catch (_: Exception) {}
+    }
+
+    private fun gerarPcmClick(freq: Double, duracaoMs: Int): ShortArray {
+        val numSamples = (SAMPLE_RATE * (duracaoMs / 1000.0)).toInt()
+        val buffer = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            // Curva de decaimento exponencial para som percussivo de madeira (woodblock)
+            val envelope = Math.exp(-t * 300.0)
+            val sampleVal = sin(2.0 * Math.PI * freq * t) * envelope
+            buffer[i] = (sampleVal * 28000.0).toInt().coerceIn(-32768, 32767).toShort()
+        }
+        return buffer
+    }
 
     fun definirBpm(novoBpm: Int) {
         _bpm.value = novoBpm.coerceIn(30, 240)
@@ -66,32 +127,42 @@ object MetronomoManager {
     fun iniciar(scope: CoroutineScope) {
         parar()
         _ativo.value = true
+        _batidaAtual.value = 1
 
         metronomoJob = scope.launch(Dispatchers.Default) {
+            var targetNanos = System.nanoTime()
+
             while (isActive && _ativo.value) {
-                val intervaloMs = (60_000L / _bpm.value).coerceAtLeast(100L)
-                val batida = _batidaAtual.value
+                val bpmAtual = _bpm.value
                 val maxBatidas = _compasso.value.maxBatidas
+                val batida = _batidaAtual.value
 
-                // Emitir tom sonoro de acento na 1ª batida e tom secundário nas demais
-                try {
-                    if (batida == 1) {
-                        toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, 50)
-                    } else {
-                        toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 35)
-                    }
-                } catch (_: Exception) {}
+                val periodNanos = (60_000_000_000.0 / bpmAtual).toLong()
 
+                // 1. Tocar som de clique do metrônomo (forte na 1ª batida, fraco nas demais)
+                tocarClique(forte = (batida == 1))
+
+                // 2. Acionar pulso visual
                 _pulsoVisual.value = true
-                delay(50L)
+
+                // 3. Atualizar próxima batida
+                val proximaBatida = if (batida >= maxBatidas) 1 else batida + 1
+                _batidaAtual.value = proximaBatida
+
+                // 4. Calcular próximo carimbo de tempo absoluto (Drift-Free Nanosecond Precision)
+                targetNanos += periodNanos
+                val sleepNanos = targetNanos - System.nanoTime()
+
+                // Apagar o pulso visual após 40ms
+                delay(40L)
                 _pulsoVisual.value = false
 
-                val restanteIntervalo = intervaloMs - 50L
-                if (restanteIntervalo > 0) {
-                    delay(restanteIntervalo)
+                val restanteSleepNanos = sleepNanos - 40_000_000L
+                if (restanteSleepNanos > 0) {
+                    delay(restanteSleepNanos / 1_000_000L)
+                } else {
+                    targetNanos = System.nanoTime()
                 }
-
-                _batidaAtual.value = if (batida >= maxBatidas) 1 else batida + 1
             }
         }
     }
@@ -104,13 +175,9 @@ object MetronomoManager {
         _batidaAtual.value = 1
     }
 
-    /**
-     * Calcula o BPM dinamicamente através do recurso Tap Tempo (toques ritmados do usuário).
-     */
     fun registrarTapTempo() {
         val agora = System.currentTimeMillis()
 
-        // Se o último toque foi há mais de 2 segundos, zera a lista de medições
         if (tapTimestamps.isNotEmpty() && agora - tapTimestamps.last() > 2000L) {
             tapTimestamps.clear()
         }
