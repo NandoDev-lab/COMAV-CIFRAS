@@ -6,6 +6,8 @@ import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.google.gson.Gson
 import com.nandohypesoft.comav.data.database.EnsaioDao
 import com.nandohypesoft.comav.data.database.EscalaCultoDao
@@ -558,7 +560,7 @@ class MainViewModel(
     }
 
     fun salvarRascunho(onSucesso: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val rascunhoFinal = _rascunho.value.copy(
                     conteudoOriginal = _rascunho.value.conteudo
@@ -569,7 +571,6 @@ class MainViewModel(
                     identificador = musicaAbertaOriginal?.identificador,
                     tipoDeConteudoAntigo = musicaAbertaOriginal?.tipoDeConteudo
                 )
-                recarregar()
 
                 val idEditado = musicaAbertaOriginal?.identificador
                 if (idEditado != null && idEditado > 0L) {
@@ -589,13 +590,31 @@ class MainViewModel(
                             atualizadaEm = System.currentTimeMillis()
                         )
                     }
+                } else {
+                    _musicaAberta.value = Musica(
+                        identificador = System.currentTimeMillis(),
+                        titulo = rascunhoFinal.titulo,
+                        conteudo = rascunhoFinal.conteudo,
+                        conteudoOriginal = rascunhoFinal.conteudo,
+                        tipoDeConteudo = rascunhoFinal.tipoDeConteudo,
+                        tipoDeOrigem = rascunhoFinal.tipoDeOrigem,
+                        nomeDoArquivoDeOrigem = rascunhoFinal.nomeDoArquivoDeOrigem,
+                        criadaEm = System.currentTimeMillis(),
+                        atualizadaEm = System.currentTimeMillis()
+                    )
                 }
 
-                _editorVisivel.value = false
-                _mensagemAlerta.value = "Música salva com sucesso!"
-                onSucesso()
+                recarregar()
+
+                withContext(Dispatchers.Main) {
+                    _editorVisivel.value = false
+                    _mensagemAlerta.value = "Música salva com sucesso!"
+                    onSucesso()
+                }
             } catch (e: Exception) {
-                _mensagemAlerta.value = e.localizedMessage ?: "Erro ao salvar música."
+                withContext(Dispatchers.Main) {
+                    _mensagemAlerta.value = e.localizedMessage ?: "Erro ao salvar música."
+                }
             }
         }
     }

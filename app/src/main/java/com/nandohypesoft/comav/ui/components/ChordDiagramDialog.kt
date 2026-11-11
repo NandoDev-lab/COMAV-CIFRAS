@@ -68,22 +68,16 @@ data class TriadeNotas(val raiz: Int, val terca: Int, val quinta: Int) {
      * Retorna os índices das notas com deslocamento de oitava real no teclado de 2 oitavas (0..23).
      */
     fun obterNotasComOitavas(inversao: PosicaoInversao): List<Int> {
+        var n1 = raiz
+        var n2 = terca
+        if (n2 < n1) n2 += 12
+        var n3 = quinta
+        while (n3 < n2) n3 += 12
+
         return when (inversao) {
-            PosicaoInversao.FUNDAMENTAL -> {
-                listOf(raiz, terca, quinta)
-            }
-            PosicaoInversao.PRIMEIRA_INVERSAO -> {
-                val n1 = terca
-                val n2 = if (quinta < terca) quinta + 12 else quinta
-                val n3 = raiz + 12
-                listOf(n1, n2, n3)
-            }
-            PosicaoInversao.SEGUNDA_INVERSAO -> {
-                val n1 = quinta
-                val n2 = if (raiz < quinta) raiz + 12 else raiz
-                val n3 = if (terca < quinta) terca + 12 else terca
-                listOf(n1, n2, n3)
-            }
+            PosicaoInversao.FUNDAMENTAL -> listOf(n1, n2, n3)
+            PosicaoInversao.PRIMEIRA_INVERSAO -> listOf(n2, n3, n1 + 12)
+            PosicaoInversao.SEGUNDA_INVERSAO -> listOf(n3, n1 + 12, n2 + 12)
         }
     }
 
@@ -203,9 +197,20 @@ object BaseDadosAcordes {
 
         val chaveInversao = if (inversao == PosicaoInversao.FUNDAMENTAL) semBarra else "$semBarra/$notaBaixoNome"
 
-        return ACORDES_VIOLAO[chaveInversao]
+        val posicaoEncontrada = ACORDES_VIOLAO[chaveInversao]
             ?: ACORDES_VIOLAO[semBarra]
             ?: ACORDES_VIOLAO[semBarra.take(if (semBarra.length >= 2 && (semBarra[1] == '#' || semBarra[1] == 'b')) 2 else 1)]
+
+        if (posicaoEncontrada != null && inversao != PosicaoInversao.FUNDAMENTAL && !ACORDES_VIOLAO.containsKey(chaveInversao)) {
+            val shiftTraste = if (inversao == PosicaoInversao.PRIMEIRA_INVERSAO) 2 else 4
+            val novasCordas = posicaoEncontrada.cordas.map { traste ->
+                if (traste > 0) traste + 1 else traste
+            }
+            val novaPestana = if (posicaoEncontrada.pestanaFret > 0) posicaoEncontrada.pestanaFret + shiftTraste else shiftTraste
+            return PosicaoViolao(pestanaFret = novaPestana, cordas = novasCordas)
+        }
+
+        return posicaoEncontrada
     }
 }
 

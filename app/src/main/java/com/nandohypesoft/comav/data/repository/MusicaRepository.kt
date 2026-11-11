@@ -164,7 +164,8 @@ class MusicaRepository(
                 "criadaEm" to musica.criadaEm,
                 "atualizadaEm" to musica.atualizadaEm
             )
-            firestore?.collection("musicas")?.document(docId)?.set(dadosMusica)?.await()
+            // Chamada assíncrona não-bloqueante para não travar o salvamento local Room
+            firestore?.collection("musicas")?.document(docId)?.set(dadosMusica)
         } catch (_: Exception) {}
     }
 
