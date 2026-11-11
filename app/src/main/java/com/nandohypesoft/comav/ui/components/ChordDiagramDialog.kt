@@ -1,9 +1,7 @@
 package com.nandohypesoft.comav.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -54,11 +51,11 @@ data class PosicaoViolao(
 )
 
 data class PosicaoTeclado(
-    // Notas no teclado (0 = C, 1 = C#, 2 = D, 3 = D#, 4 = E, 5 = F, 6 = F#, 7 = G, 8 = G#, 9 = A, 10 = A#, 11 = B)
     val notas: List<Int>
 )
 
 data class TriadeNotas(val raiz: Int, val terca: Int, val quinta: Int) {
+
     fun obterInversao(inversao: PosicaoInversao): List<Int> {
         return when (inversao) {
             PosicaoInversao.FUNDAMENTAL -> listOf(raiz, terca, quinta)
@@ -67,74 +64,114 @@ data class TriadeNotas(val raiz: Int, val terca: Int, val quinta: Int) {
         }
     }
 
+    /**
+     * Retorna os índices das notas com deslocamento de oitava real no teclado de 2 oitavas (0..23).
+     */
+    fun obterNotasComOitavas(inversao: PosicaoInversao): List<Int> {
+        return when (inversao) {
+            PosicaoInversao.FUNDAMENTAL -> {
+                listOf(raiz, terca, quinta)
+            }
+            PosicaoInversao.PRIMEIRA_INVERSAO -> {
+                val n1 = terca
+                val n2 = if (quinta < terca) quinta + 12 else quinta
+                val n3 = raiz + 12
+                listOf(n1, n2, n3)
+            }
+            PosicaoInversao.SEGUNDA_INVERSAO -> {
+                val n1 = quinta
+                val n2 = if (raiz < quinta) raiz + 12 else raiz
+                val n3 = if (terca < quinta) terca + 12 else terca
+                listOf(n1, n2, n3)
+            }
+        }
+    }
+
     fun formatarNotas(inversao: PosicaoInversao): String {
-        val list = obterInversao(inversao)
         val nomes = arrayOf("Dó", "Dó#", "Ré", "Ré#", "Mi", "Fá", "Fá#", "Sol", "Sol#", "Lá", "Lá#", "Si")
-        return list.joinToString(" + ") { nomes[it] }
+        val notasList = when (inversao) {
+            PosicaoInversao.FUNDAMENTAL -> listOf(raiz, terca, quinta)
+            PosicaoInversao.PRIMEIRA_INVERSAO -> listOf(terca, quinta, raiz)
+            PosicaoInversao.SEGUNDA_INVERSAO -> listOf(quinta, raiz, terca)
+        }
+        return notasList.joinToString(" + ") { nomes[it % 12] }
     }
 }
 
 object BaseDadosAcordes {
     val ACORDES_VIOLAO = mapOf(
+        // C
         "C" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 1, 0)),
         "C/E" to PosicaoViolao(cordas = listOf(0, 3, 2, 0, 1, 0)),
         "C/G" to PosicaoViolao(cordas = listOf(3, 3, 2, 0, 1, 0)),
         "C#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "C#m" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 2, 1)),
-        "Db" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "Dbm" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "C#/F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 4, 3, 1, 2, 1)),
+        "C#/G#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 1, 3, 3, 3, 1)),
         "Cm" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 1, 3, 3, 2, 1)),
-        "C7" to PosicaoViolao(cordas = listOf(-1, 3, 2, 3, 1, 0)),
-        "Cadd9" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 3, 3)),
-        "Cmaj7" to PosicaoViolao(cordas = listOf(-1, 3, 2, 0, 0, 0)),
+        "Cm/Eb" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 3, 1, 1, 1, 1)),
+        "Cm/G" to PosicaoViolao(pestanaFret = 3, cordas = listOf(1, 1, 3, 3, 2, 1)),
+
+        // D
         "D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 2)),
         "D/F#" to PosicaoViolao(cordas = listOf(2, 0, 0, 2, 3, 2)),
         "D/A" to PosicaoViolao(cordas = listOf(-1, 0, 0, 2, 3, 2)),
         "D#" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "D#m" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 2, 1)),
-        "Eb" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "Ebm" to PosicaoViolao(pestanaFret = 6, cordas = listOf(-1, 1, 3, 3, 2, 1)),
+        "D#/G" to PosicaoViolao(pestanaFret = 3, cordas = listOf(1, 3, 3, 3, 1, 1)),
+        "D#/A#" to PosicaoViolao(pestanaFret = 6, cordas = listOf(1, 1, 3, 3, 3, 1)),
         "Dm" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 1)),
         "Dm/F" to PosicaoViolao(cordas = listOf(1, -1, 0, 2, 3, 1)),
-        "D7" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 1, 2)),
-        "Dsus4" to PosicaoViolao(cordas = listOf(-1, -1, 0, 2, 3, 3)),
+        "Dm/A" to PosicaoViolao(cordas = listOf(-1, 0, 0, 2, 3, 1)),
+
+        // E
         "E" to PosicaoViolao(cordas = listOf(0, 2, 2, 1, 0, 0)),
         "E/G#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 2, 2, 1, 0, 0)),
         "E/B" to PosicaoViolao(cordas = listOf(-1, 2, 2, 1, 0, 0)),
         "Em" to PosicaoViolao(cordas = listOf(0, 2, 2, 0, 0, 0)),
-        "E7" to PosicaoViolao(cordas = listOf(0, 2, 0, 1, 0, 0)),
+        "Em/G" to PosicaoViolao(cordas = listOf(3, 2, 2, 0, 0, 0)),
+        "Em/B" to PosicaoViolao(cordas = listOf(-1, 2, 2, 0, 0, 0)),
+
+        // F
         "F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "F/A" to PosicaoViolao(cordas = listOf(-1, 0, 3, 2, 1, 1)),
         "F/C" to PosicaoViolao(cordas = listOf(-1, 3, 3, 2, 1, 1)),
         "Fm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 3, 3, 1, 1, 1)),
+        "Fm/Ab" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 1, 1, 1)),
+        "Fm/C" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 3, 3, 1, 1, 1)),
+
+        // F# / Gb
         "F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 2, 1, 1)),
+        "F#/A#" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 4, 3, 2, 2)),
+        "F#/C#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 1, 1, 3, 4, 2)),
         "F#m" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 1, 1, 1)),
-        "F#m7" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 1, 1, 1, 1)),
-        "Gb" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 3, 3, 2, 1, 1)),
+        "F#m/A" to PosicaoViolao(cordas = listOf(-1, 0, 4, 2, 2, 2)),
+        "F#m/C#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 1, 2, 1)),
+
+        // G
         "G" to PosicaoViolao(cordas = listOf(3, 2, 0, 0, 0, 3)),
         "G/B" to PosicaoViolao(cordas = listOf(-1, 2, 0, 0, 3, 3)),
         "G/D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 0, 0, 3)),
-        "G#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1)),
-        "G#m" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 1, 1, 1)),
-        "Ab" to PosicaoViolao(pestanaFret = 4, cordas = listOf(1, 3, 3, 2, 1, 1)),
         "Gm" to PosicaoViolao(pestanaFret = 3, cordas = listOf(1, 3, 3, 1, 1, 1)),
-        "G7" to PosicaoViolao(cordas = listOf(3, 2, 0, 0, 0, 1)),
-        "Gadd9" to PosicaoViolao(cordas = listOf(3, 2, 0, 2, 0, 3)),
+        "Gm/Bb" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 0, 0, 3, 3)),
+        "Gm/D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 3, 3, 3)),
+
+        // A
         "A" to PosicaoViolao(cordas = listOf(-1, 0, 2, 2, 2, 0)),
         "A/C#" to PosicaoViolao(cordas = listOf(-1, 4, 2, 2, 2, 0)),
         "A/E" to PosicaoViolao(cordas = listOf(0, 0, 2, 2, 2, 0)),
-        "A#" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "A#m" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1)),
         "Am" to PosicaoViolao(cordas = listOf(-1, 0, 2, 2, 1, 0)),
-        "A7" to PosicaoViolao(cordas = listOf(-1, 0, 2, 0, 2, 0)),
-        "Am7" to PosicaoViolao(cordas = listOf(-1, 0, 2, 0, 1, 0)),
+        "Am/C" to PosicaoViolao(cordas = listOf(-1, 3, 2, 2, 1, 0)),
+        "Am/E" to PosicaoViolao(cordas = listOf(0, 0, 2, 2, 1, 0)),
+
+        // B / Bb
         "B" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 3, 3, 1)),
         "B/D#" to PosicaoViolao(pestanaFret = 4, cordas = listOf(-1, 3, 1, 1, 1, 1)),
         "B/F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 1, 3, 3, 3, 1)),
         "Bm" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 3, 2, 1)),
-        "Bm7" to PosicaoViolao(pestanaFret = 2, cordas = listOf(-1, 1, 3, 1, 2, 1)),
+        "Bm/D" to PosicaoViolao(cordas = listOf(-1, -1, 0, 4, 3, 2)),
+        "Bm/F#" to PosicaoViolao(pestanaFret = 2, cordas = listOf(1, 1, 3, 3, 2, 1)),
         "Bb" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 3, 1)),
-        "Bbm" to PosicaoViolao(pestanaFret = 1, cordas = listOf(-1, 1, 3, 3, 2, 1))
+        "Bb/D" to PosicaoViolao(pestanaFret = 3, cordas = listOf(-1, 3, 1, 1, 1, 1)),
+        "Bb/F" to PosicaoViolao(pestanaFret = 1, cordas = listOf(1, 1, 3, 3, 3, 1))
     )
 
     fun obterNotasTriade(acorde: String): TriadeNotas {
@@ -161,7 +198,8 @@ object BaseDadosAcordes {
 
         val triade = obterNotasTriade(limpo)
         val nomesInversao = triade.obterInversao(inversao)
-        val notaBaixoNome = arrayOf("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")[nomesInversao[0]]
+        val nomesNotasPt = arrayOf("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+        val notaBaixoNome = nomesNotasPt[nomesInversao[0] % 12]
 
         val chaveInversao = if (inversao == PosicaoInversao.FUNDAMENTAL) semBarra else "$semBarra/$notaBaixoNome"
 
@@ -191,7 +229,7 @@ fun ChordDiagramDialog(
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.width(340.dp).padding(8.dp)
+            modifier = Modifier.width(350.dp).padding(8.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -212,7 +250,7 @@ fun ChordDiagramDialog(
                         Text(
                             text = "Notas: ${triade.formatarNotas(inversao)}",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -301,7 +339,7 @@ fun ChordDiagramDialog(
                     }
                 } else {
                     val posTeclado = remember(acordeLimpo, inversao) {
-                        PosicaoTeclado(notas = triade.obterInversao(inversao))
+                        PosicaoTeclado(notas = triade.obterNotasComOitavas(inversao))
                     }
                     DesenharDiagramaTeclado(posTeclado)
                 }
@@ -391,38 +429,40 @@ fun DesenharDiagramaTeclado(posicao: PosicaoTeclado) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
-    // Mapeamento das 7 teclas brancas (0=C, 2=D, 4=E, 5=F, 7=G, 9=A, 11=B)
+    // Mapeamento das 14 teclas brancas cobrindo 2 oitavas (C1 D1 E1 F1 G1 A1 B1 | C2 D2 E2 F2 G2 A2 B2)
     val whiteKeys = listOf(
-        0 to "C",
-        2 to "D",
-        4 to "E",
-        5 to "F",
-        7 to "G",
-        9 to "A",
-        11 to "B"
+        0 to "C1", 2 to "D1", 4 to "E1", 5 to "F1", 7 to "G1", 9 to "A1", 11 to "B1",
+        12 to "C2", 14 to "D2", 16 to "E2", 17 to "F2", 19 to "G2", 21 to "A2", 23 to "B2"
     )
 
-    // Mapeamento das 5 teclas pretas: nota -> boundaryIndex da linha entre teclas brancas
+    // Mapeamento das 10 teclas pretas cobrindo 2 oitavas: nota -> boundaryIndex da linha entre teclas brancas
     val blackKeys = listOf(
-        1 to 1,  // C# / Db
-        3 to 2,  // D# / Eb
-        6 to 4,  // F# / Gb
-        8 to 5,  // G# / Ab
-        10 to 6  // A# / Bb
+        // Oitava 1
+        1 to 1,   // C#1 / Db1
+        3 to 2,   // D#1 / Eb1
+        6 to 4,   // F#1 / Gb1
+        8 to 5,   // G#1 / Ab1
+        10 to 6,  // A#1 / Bb1
+        // Oitava 2
+        13 to 8,  // C#2 / Db2
+        15 to 9,  // D#2 / Eb2
+        18 to 11, // F#2 / Gb2
+        20 to 12, // G#2 / Ab2
+        22 to 13  // A#2 / Bb2
     )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(vertical = 8.dp)
     ) {
-        Canvas(modifier = Modifier.size(width = 240.dp, height = 110.dp)) {
-            val numWhite = 7
+        Canvas(modifier = Modifier.size(width = 280.dp, height = 110.dp)) {
+            val numWhite = 14
             val wWidth = size.width / numWhite
             val wHeight = size.height
-            val bWidth = wWidth * 0.58f
+            val bWidth = wWidth * 0.60f
             val bHeight = wHeight * 0.62f
 
-            // 1. Desenhar Teclas Brancas
+            // 1. Desenhar Teclas Brancas (2 Oitavas)
             whiteKeys.forEachIndexed { i, (notaIndex, _) ->
                 val left = i * wWidth
                 val estaPressionada = posicao.notas.contains(notaIndex)
@@ -430,15 +470,15 @@ fun DesenharDiagramaTeclado(posicao: PosicaoTeclado) {
                 // Fundo da tecla branca
                 drawRect(
                     color = if (estaPressionada) primaryColor else Color.White,
-                    topLeft = Offset(left + 1.dp.toPx(), 0f),
-                    size = Size(wWidth - 2.dp.toPx(), wHeight)
+                    topLeft = Offset(left + 0.5f.dp.toPx(), 0f),
+                    size = Size(wWidth - 1.dp.toPx(), wHeight)
                 )
 
                 // Borda da tecla branca
                 drawRect(
                     color = onSurfaceColor.copy(alpha = 0.4f),
-                    topLeft = Offset(left + 1.dp.toPx(), 0f),
-                    size = Size(wWidth - 2.dp.toPx(), wHeight),
+                    topLeft = Offset(left + 0.5f.dp.toPx(), 0f),
+                    size = Size(wWidth - 1.dp.toPx(), wHeight),
                     style = Stroke(width = 1.dp.toPx())
                 )
 
@@ -446,13 +486,13 @@ fun DesenharDiagramaTeclado(posicao: PosicaoTeclado) {
                 if (estaPressionada) {
                     drawCircle(
                         color = Color.White,
-                        radius = 4.5.dp.toPx(),
-                        center = Offset(left + wWidth / 2f, wHeight - 14.dp.toPx())
+                        radius = 3.5.dp.toPx(),
+                        center = Offset(left + wWidth / 2f, wHeight - 12.dp.toPx())
                     )
                 }
             }
 
-            // 2. Desenhar Teclas Pretas
+            // 2. Desenhar Teclas Pretas (2 Oitavas)
             blackKeys.forEach { (notaIndex, boundaryIndex) ->
                 val estaPressionada = posicao.notas.contains(notaIndex)
                 val left = boundaryIndex * wWidth - bWidth / 2f
@@ -476,8 +516,8 @@ fun DesenharDiagramaTeclado(posicao: PosicaoTeclado) {
                 if (estaPressionada) {
                     drawCircle(
                         color = Color.White,
-                        radius = 3.5.dp.toPx(),
-                        center = Offset(left + bWidth / 2f, bHeight - 10.dp.toPx())
+                        radius = 3.0.dp.toPx(),
+                        center = Offset(left + bWidth / 2f, bHeight - 8.dp.toPx())
                     )
                 }
             }

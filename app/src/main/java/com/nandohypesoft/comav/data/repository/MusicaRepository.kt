@@ -107,7 +107,16 @@ class MusicaRepository(
         }
     }
 
-    suspend fun salvarMusica(musicaNova: MusicaNova, identificador: Long? = null) {
+    suspend fun obterMusicaPorId(identificador: Long, tipoDeConteudo: TipoDeConteudo): Musica? {
+        val todas = musicaDao.obterTodasParaBackup()
+        return todas.find { it.identificador == identificador && it.tipoDeConteudo == tipoDeConteudo.name }?.toMusica()
+    }
+
+    suspend fun salvarMusica(
+        musicaNova: MusicaNova,
+        identificador: Long? = null,
+        tipoDeConteudoAntigo: TipoDeConteudo? = null
+    ) {
         val agora = System.currentTimeMillis()
         val tituloLimpo = musicaNova.titulo.trim()
         val tituloNorm = normalizarTitulo(tituloLimpo)
@@ -121,12 +130,17 @@ class MusicaRepository(
             existenteMesmoTitulo?.identificador ?: ((todas.maxOfOrNull { it.identificador } ?: 0L) + 1L)
         }
 
+        // Se o tipo de conteúdo mudou (ex: LETRA -> CIFRA), excluir o registro antigo
+        if (tipoDeConteudoAntigo != null && tipoDeConteudoAntigo != musicaNova.tipoDeConteudo && idFinal > 0L) {
+            musicaDao.excluir(idFinal, tipoDeConteudoAntigo.name)
+        }
+
         val entity = MusicaEntity(
             identificador = idFinal,
             titulo = tituloLimpo,
             tituloNormalizado = tituloNorm,
             conteudo = musicaNova.conteudo,
-            conteudoOriginal = musicaNova.conteudoOriginal,
+            conteudoOriginal = musicaNova.conteudo,
             tipoDeConteudo = musicaNova.tipoDeConteudo.name,
             tipoDeOrigem = musicaNova.tipoDeOrigem.name,
             nomeArquivoOrigem = musicaNova.nomeDoArquivoDeOrigem,

@@ -560,8 +560,37 @@ class MainViewModel(
     fun salvarRascunho(onSucesso: () -> Unit) {
         viewModelScope.launch {
             try {
-                repository.salvarMusica(_rascunho.value, _musicaAberta.value?.identificador)
+                val rascunhoFinal = _rascunho.value.copy(
+                    conteudoOriginal = _rascunho.value.conteudo
+                )
+                val musicaAbertaOriginal = _musicaAberta.value
+                repository.salvarMusica(
+                    musicaNova = rascunhoFinal,
+                    identificador = musicaAbertaOriginal?.identificador,
+                    tipoDeConteudoAntigo = musicaAbertaOriginal?.tipoDeConteudo
+                )
                 recarregar()
+
+                val idEditado = musicaAbertaOriginal?.identificador
+                if (idEditado != null && idEditado > 0L) {
+                    val musicaAtualizada = repository.obterMusicaPorId(idEditado, rascunhoFinal.tipoDeConteudo)
+                    if (musicaAtualizada != null) {
+                        _musicaAberta.value = musicaAtualizada
+                    } else {
+                        _musicaAberta.value = Musica(
+                            identificador = idEditado,
+                            titulo = rascunhoFinal.titulo,
+                            conteudo = rascunhoFinal.conteudo,
+                            conteudoOriginal = rascunhoFinal.conteudo,
+                            tipoDeConteudo = rascunhoFinal.tipoDeConteudo,
+                            tipoDeOrigem = rascunhoFinal.tipoDeOrigem,
+                            nomeDoArquivoDeOrigem = rascunhoFinal.nomeDoArquivoDeOrigem,
+                            criadaEm = System.currentTimeMillis(),
+                            atualizadaEm = System.currentTimeMillis()
+                        )
+                    }
+                }
+
                 _editorVisivel.value = false
                 _mensagemAlerta.value = "Música salva com sucesso!"
                 onSucesso()
