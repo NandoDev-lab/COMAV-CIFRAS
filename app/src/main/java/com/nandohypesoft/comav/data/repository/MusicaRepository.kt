@@ -268,16 +268,20 @@ class MusicaRepository(
     suspend fun sincronizarComFirebase(): Int = withContext(Dispatchers.IO) {
         val db = firestore ?: throw IllegalArgumentException("Firebase não inicializado.")
 
-        val locaisAtuais = musicaDao.obterTodasParaBackup().associateBy { Pair(it.identificador, it.tipoDeConteudo) }
-        val entidadesParaSalvar = mutableListOf<MusicaEntity>()
+        val todasLocais = musicaDao.obterTodasParaBackup()
+        val locaisAtuaisMap = todasLocais.associateBy { Pair(it.identificador, it.tipoDeConteudo) }
+        val entidadesParaSalvarLocal = mutableListOf<MusicaEntity>()
+        val documentosParaSubirFirebase = mutableListOf<MusicaEntity>()
 
         try {
             val result = db.collection("musicas").get().await()
-            if (result.isEmpty) {
-                // Se o Firebase estiver vazio, faz a migração inicial da base local para a nuvem automaticamente!
+            if (result.isEmpty && todasLocais.isNotEmpty()) {
                 return@withContext migrarBancoParaFirebase()
             }
 
+            val chavesRemotasNoFirebase = mutableSetOf<Pair<Long, String>>()
+
+            // 1. Processar todos os documentos remotos do Firestore
             for (doc in result.documents) {
                 val identificador = doc.getLong("identificador") ?: continue
                 val tipoStr = doc.getString("tipoDeConteudo") ?: "LETRA"
@@ -291,31 +295,72 @@ class MusicaRepository(
 
                 val norm = normalizarTitulo(titulo)
                 val chave = Pair(identificador, tipoStr)
-                val localExistente = locaisAtuais[chave]
+                chavesRemotasNoFirebase.add(chave)
+
+                val localExistente = locaisAtuaisMap[chave]
 
                 if (localExistente != null && localExistente.atualizadaEm > atualizadaEm) {
-                    entidadesParaSalvar.add(localExistente)
+                    // A versão local é MAIS RECENTE que a do Firestore: preservar a local e subir pro Firebase!
+                    entidadesParaSalvarLocal.add(localExistente)
+                    documentosParaSubirFirebase.add(localExistente)
                 } else {
-                    entidadesParaSalvar.add(
-                        MusicaEntity(
-                            identificador = identificador,
-                            titulo = titulo.trim(),
-                            tituloNormalizado = norm,
-                            conteudo = conteudo,
-                            conteudoOriginal = conteudoOriginal,
-                            tipoDeConteudo = tipoStr,
-                            tipoDeOrigem = tipoOrigemStr,
-                            nomeArquivoOrigem = nomeArquivo,
-                            criadaEm = localExistente?.criadaEm ?: criadaEm,
-                            atualizadaEm = atualizadaEm
-                        )
+                    // A versão remota é mais recente ou nova: atualizar banco local!
+                    val remotaEntity = MusicaEntity(
+                        identificador = identificador,
+                        titulo = titulo.trim(),
+                        tituloNormalizado = norm,
+                        conteudo = conteudo,
+                        conteudoOriginal = conteudoOriginal,
+                        tipoDeConteudo = tipoStr,
+                        tipoDeOrigem = tipoOrigemStr,
+                        nomeArquivoOrigem = nomeArquivo,
+                        criadaEm = localExistente?.criadaEm ?: criadaEm,
+                        atualizadaEm = atualizadaEm
                     )
+                    entidadesParaSalvarLocal.add(remotaEntity)
                 }
             }
-            if (entidadesParaSalvar.isNotEmpty()) {
-                musicaDao.salvarTodas(entidadesParaSalvar)
+
+            // 2. Processar músicas criadas LOCALMENTE no aparelho que ainda NÃO existem no Firestore!
+            for ((chave, localEntity) in locaisAtuaisMap) {
+                if (!chavesRemotasNoFirebase.contains(chave)) {
+                    // Músicas locais exclusivas: preservar no banco local Room e SUBIR para a nuvem!
+                    entidadesParaSalvarLocal.add(localEntity)
+                    documentosParaSubirFirebase.add(localEntity)
+                }
             }
-            entidadesParaSalvar.size
+
+            // 3. Salvar todas as entidades no Room DB local
+            if (entidadesParaSalvarLocal.isNotEmpty()) {
+                musicaDao.salvarTodas(entidadesParaSalvarLocal)
+            }
+
+            // 4. Subir todas as músicas locais novas/atualizadas para o Firestore em batches
+            if (documentosParaSubirFirebase.isNotEmpty()) {
+                for (chunk in documentosParaSubirFirebase.chunked(100)) {
+                    val batch = db.batch()
+                    for (entity in chunk) {
+                        val musica = entity.toMusica()
+                        val docId = "${musica.identificador}_${musica.tipoDeConteudo.name}"
+                        val docRef = db.collection("musicas").document(docId)
+                        val dados = mapOf(
+                            "identificador" to musica.identificador,
+                            "titulo" to musica.titulo,
+                            "conteudo" to musica.conteudo,
+                            "conteudoOriginal" to musica.conteudoOriginal,
+                            "tipoDeConteudo" to musica.tipoDeConteudo.name,
+                            "tipoDeOrigem" to musica.tipoDeOrigem.name,
+                            "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
+                            "criadaEm" to musica.criadaEm,
+                            "atualizadaEm" to musica.atualizadaEm
+                        )
+                        batch.set(docRef, dados)
+                    }
+                    batch.commit().await()
+                }
+            }
+
+            entidadesParaSalvarLocal.size
         } catch (e: Exception) {
             val msgErro = e.localizedMessage ?: e.message ?: "Erro de conexão com o Firebase."
             val msgFormatada = if (msgErro.contains("PERMISSION_DENIED", ignoreCase = true)) {
