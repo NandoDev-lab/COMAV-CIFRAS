@@ -641,9 +641,22 @@ class MainViewModel(
     }
 
     fun excluirMusica(musica: Musica) {
-        viewModelScope.launch {
-            repository.excluirMusica(musica.identificador, musica.tipoDeConteudo)
-            recarregar()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.excluirMusica(musica.identificador, musica.tipoDeConteudo)
+                recarregar()
+                withContext(Dispatchers.Main) {
+                    if (_musicaAberta.value?.identificador == musica.identificador) {
+                        _musicaAberta.value = null
+                        _visualizadorVisivel.value = false
+                    }
+                    _mensagemAlerta.value = "Música excluída com sucesso!"
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _mensagemAlerta.value = e.localizedMessage ?: "Erro ao excluir música."
+                }
+            }
         }
     }
 

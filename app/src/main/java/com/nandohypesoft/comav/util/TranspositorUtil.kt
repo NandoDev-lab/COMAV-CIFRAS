@@ -5,6 +5,17 @@ object TranspositorUtil {
     private val NOTAS_SUSTERIDO = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val NOTAS_BEMOL    = arrayOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
 
+    // Dicionário de palavras comuns em português para evitar falsos positivos de cifra em letras
+    private val PALAVRAS_PORTUGUES_COMUNS = setOf(
+        "a", "e", "o", "da", "do", "de", "em", "se", "no", "na", "os", "as", "um", "uma",
+        "meu", "seu", "teu", "sua", "tua", "com", "por", "para", "pra", "bem", "paz", "bom",
+        "pai", "mão", "véu", "sol", "dor", "fim", "rei", "luz", "vida", "graça", "glória",
+        "amém", "deus", "senhor", "jesus", "coração", "alma", "amor", "terra", "céu", "santo",
+        "ele", "ela", "eles", "elas", "nós", "vós", "que", "como", "onde", "quando", "quem",
+        "mais", "menos", "aqui", "ali", "então", "sempre", "nunca", "hoje", "já", "até",
+        "ti", "mim", "me", "te", "lhe", "nos", "vos", "lhes", "tudo", "nada", "todos", "todas"
+    )
+
     // Mapa para localizar a posição de qualquer nota (0 a 11)
     private val NOTA_PARA_INDICE = mapOf(
         "C" to 0, "B#" to 0,
@@ -21,8 +32,8 @@ object TranspositorUtil {
         "B" to 11, "CB" to 11, "Cb" to 11
     )
 
-    // Regex para identificar um acorde individual com nota raiz, sufixos opcionais e nota de baixo opcional
-    private val REGEX_ACORDE_TOKEN = Regex("^[A-G][#b]?(?:maj|min|dim|aug|sus2|sus4|sus|add9|m)?\\d*(?:\\+[57])?(?:\\([#b]?\\d+\\))?(?:/[A-G][#b]?)?$", RegexOption.IGNORE_CASE)
+    // Regex estrito para identificar acordes (nota raiz deve obrigatoriamente ser MAIÚSCULA A..G)
+    private val REGEX_ACORDE_TOKEN = Regex("^[A-G][#b]?(?:maj|min|dim|aug|sus2|sus4|sus|add9|m)?\\d*(?:\\+[57])?(?:\\([#b]?\\d+\\))?(?:/[A-G][#b]?)?$")
 
     // Regex para capturar notas isoladas dentro de um acorde (ex: "F#m7/A#" -> Grupo 1: F#, Grupo 2: m7, Grupo 3: /A#)
     private val REGEX_PARSER_ACORDE = Regex("^([A-G][#b]?)(.*?)(?:/([A-G][#b]?))?$", RegexOption.IGNORE_CASE)
@@ -58,6 +69,7 @@ object TranspositorUtil {
      */
     fun ehAcorde(token: String): Boolean {
         val limpo = token.replace(Regex("[()\\[\\].,;:!?|]"), "").trim()
+        if (PALAVRAS_PORTUGUES_COMUNS.contains(limpo.lowercase())) return false
         return REGEX_ACORDE_TOKEN.matches(limpo)
     }
 
@@ -82,23 +94,22 @@ object TranspositorUtil {
         val tokens = limpa.split(Regex("\\s+")).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return false
 
-        // Contar quantas palavras/tokens casam com o padrão de acordes
+        // Se houver qualquer palavra comum em português na linha, é uma linha de letra!
+        val temPalavrasDeLetra = tokens.any { token ->
+            val limpo = token.replace(Regex("[()\\[\\].,;:!?|]"), "").lowercase()
+            PALAVRAS_PORTUGUES_COMUNS.contains(limpo) || (limpo.length >= 4 && !limpo.contains('/') && !limpo.contains('#') && !limpo.contains("maj") && !limpo.contains("sus") && !limpo.contains("add") && !limpo.contains("dim") && !limpo.contains("aug"))
+        }
+
+        if (temPalavrasDeLetra) {
+            return false
+        }
+
+        // Se a proporção de acordes na linha for alta (>= 50%), é uma linha de cifras!
         val countAcordes = tokens.count { token ->
             val tSemPont = token.replace(Regex("[()\\[\\].,;:!?|]"), "")
             ehAcorde(tSemPont)
         }
 
-        // Se houver palavras longas (> 3 letras sem ser sustenido/bemol/números/barra), é indício de texto de letra (ex: "presença", "Senhor", "glória")
-        val temPalavrasLongasDeLetra = tokens.any { token ->
-            val limpo = token.replace(Regex("[()\\[\\].,;:!?|]"), "")
-            limpo.length >= 4 && !limpo.contains('/') && !limpo.contains('#') && !limpo.contains("maj", ignoreCase = true) && !limpo.contains("sus", ignoreCase = true) && !limpo.contains("add", ignoreCase = true) && !limpo.contains("dim", ignoreCase = true) && !limpo.contains("aug", ignoreCase = true)
-        }
-
-        if (temPalavrasLongasDeLetra) {
-            return false
-        }
-
-        // Se a proporção de acordes na linha for alta (>= 50%), é uma linha de cifras!
         val proporcaoAcordes = countAcordes.toFloat() / tokens.size
         return proporcaoAcordes >= 0.5f
     }

@@ -69,7 +69,9 @@ object DocumentExtractor {
         try {
             PDFBoxResourceLoader.init(context)
             PDDocument.load(inputStream).use { document ->
-                val stripper = PDFTextStripper()
+                val stripper = PDFTextStripper().apply {
+                    sortByPosition = true
+                }
                 return stripper.getText(document).trim()
             }
         } catch (e: Exception) {

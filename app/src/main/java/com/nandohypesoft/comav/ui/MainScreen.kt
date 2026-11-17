@@ -281,13 +281,33 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botão de Nova Música
-            Button(
-                onClick = { viewModel.abrirCriacao() },
+            // Botão de Nova Música + Alternar Modo Exclusão
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("+ Nova música")
+                Button(
+                    onClick = { viewModel.abrirCriacao() },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("+ Nova música")
+                }
+
+                OutlinedButton(
+                    onClick = { modoExclusaoHabilitado = !modoExclusaoHabilitado },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = if (modoExclusaoHabilitado)
+                        ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    else ButtonDefaults.outlinedButtonColors()
+                ) {
+                    Text(
+                        text = if (modoExclusaoHabilitado) "🗑️ Exclusão ON" else "🗑️ Exclusão OFF",
+                        fontWeight = FontWeight.Bold,
+                        color = if (modoExclusaoHabilitado) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1359,15 +1379,29 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Button(
-                        onClick = {
-                            musicaAberta?.let { viewModel.abrirEdicao(it) }
-                            viewModel.fecharVisualizador()
-                        },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Editar música")
+                        Button(
+                            onClick = {
+                                musicaAberta?.let { viewModel.abrirEdicao(it) }
+                                viewModel.fecharVisualizador()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Editar música")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                musicaAberta?.let { musicaParaExcluir = it }
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Excluir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
