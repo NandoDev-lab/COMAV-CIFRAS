@@ -173,12 +173,64 @@ class MusicaRepository(
         return todas.find { it.identificador == id && it.tipoDeConteudo == tipo }?.criadaEm ?: fallback
     }
 
-    suspend fun excluirMusica(identificador: Long, tipoDeConteudo: TipoDeConteudo) {
+    suspend fun reorganizarIdentificadores(tipoDeConteudo: TipoDeConteudo) = withContext(Dispatchers.IO) {
+        val todas = musicaDao.obterTodasParaBackup()
+        val doTipo = todas.filter { it.tipoDeConteudo == tipoDeConteudo.name }
+            .sortedWith(compareBy<MusicaEntity> { it.identificador }.thenBy { it.tituloNormalizado })
+
+        val entidadesReorganizadas = mutableListOf<MusicaEntity>()
+
+        doTipo.forEachIndexed { index, entity ->
+            val novoId = (index + 1).toLong()
+            if (entity.identificador != novoId) {
+                try {
+                    val oldDocId = "${entity.identificador}_${tipoDeConteudo.name}"
+                    firestore?.collection("musicas")?.document(oldDocId)?.delete()
+                } catch (_: Exception) {}
+            }
+            entidadesReorganizadas.add(
+                entity.copy(
+                    identificador = novoId,
+                    atualizadaEm = System.currentTimeMillis()
+                )
+            )
+        }
+
+        if (entidadesReorganizadas.isNotEmpty()) {
+            musicaDao.excluirPorTipo(tipoDeConteudo.name)
+            musicaDao.salvarTodas(entidadesReorganizadas)
+
+            try {
+                for (entity in entidadesReorganizadas) {
+                    val docId = "${entity.identificador}_${tipoDeConteudo.name}"
+                    val docRef = firestore?.collection("musicas")?.document(docId)
+                    val musica = entity.toMusica()
+                    val dados = mapOf(
+                        "identificador" to musica.identificador,
+                        "titulo" to musica.titulo,
+                        "conteudo" to musica.conteudo,
+                        "conteudoOriginal" to musica.conteudoOriginal,
+                        "tipoDeConteudo" to musica.tipoDeConteudo.name,
+                        "tipoDeOrigem" to musica.tipoDeOrigem.name,
+                        "nomeDoArquivoDeOrigem" to (musica.nomeDoArquivoDeOrigem ?: ""),
+                        "criadaEm" to musica.criadaEm,
+                        "atualizadaEm" to musica.atualizadaEm
+                    )
+                    docRef?.set(dados)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    suspend fun excluirMusica(identificador: Long, tipoDeConteudo: TipoDeConteudo) = withContext(Dispatchers.IO) {
         musicaDao.excluir(identificador, tipoDeConteudo.name)
         try {
             val docId = "${identificador}_${tipoDeConteudo.name}"
-            firestore?.collection("musicas")?.document(docId)?.delete()?.await()
+            firestore?.collection("musicas")?.document(docId)?.delete()
         } catch (_: Exception) {}
+
+        // Reorganizar os identificadores para que a lista fique sequencial (Nº 1, Nº 2, Nº 3...) sem números faltando
+        reorganizarIdentificadores(tipoDeConteudo)
     }
 
     suspend fun exportarBanco(): BackupMusicas {

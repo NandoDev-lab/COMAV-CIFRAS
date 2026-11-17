@@ -33,6 +33,9 @@ interface MusicaDao {
     @Query("DELETE FROM musicas WHERE identificador = :identificador AND tipo_de_conteudo = :tipoDeConteudo")
     suspend fun excluir(identificador: Long, tipoDeConteudo: String): Int
 
+    @Query("DELETE FROM musicas WHERE tipo_de_conteudo = :tipoDeConteudo")
+    suspend fun excluirPorTipo(tipoDeConteudo: String): Int
+
     @Query("DELETE FROM musicas")
     suspend fun limparTabela(): Int
 

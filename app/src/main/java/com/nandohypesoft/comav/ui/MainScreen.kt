@@ -108,6 +108,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.nandohypesoft.comav.model.ModoDeBusca
 import com.nandohypesoft.comav.model.Musica
 import com.nandohypesoft.comav.model.TipoDeConteudo
+import com.nandohypesoft.comav.model.TipoFuncaoEquipe
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -138,6 +139,12 @@ fun MainScreen(viewModel: MainViewModel) {
     var mostrarLeitorQrCode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val telaAtual by viewModel.telaAtual.collectAsState()
+
+    val tipoFuncaoEquipe by viewModel.tipoFuncaoEquipe.collectAsState()
+    val nomeUsuario by viewModel.nomeUsuario.collectAsState()
+    val ehDevOuLider = remember(tipoFuncaoEquipe, nomeUsuario) {
+        tipoFuncaoEquipe == TipoFuncaoEquipe.ADMIN_LIDER || com.nandohypesoft.comav.util.EquipeConfig.ehDesenvolvedor(nomeUsuario) || com.nandohypesoft.comav.util.EquipeConfig.ehLider(nomeUsuario)
+    }
 
     if (telaAtual == TelaDestino.HOME) {
         HomeScreen(viewModel = viewModel)
@@ -409,11 +416,11 @@ fun MainScreen(viewModel: MainViewModel) {
                                     )
                                 }
 
-                                if (modoExclusaoHabilitado) {
+                                if (ehDevOuLider || modoExclusaoHabilitado) {
                                     TextButton(
                                         onClick = { musicaParaExcluir = musica }
                                     ) {
-                                        Text("Excluir", color = MaterialTheme.colorScheme.error)
+                                        Text("Excluir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
