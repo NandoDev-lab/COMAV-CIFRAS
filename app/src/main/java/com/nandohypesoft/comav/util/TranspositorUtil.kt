@@ -22,7 +22,7 @@ object TranspositorUtil {
     )
 
     // Regex para identificar um acorde individual com nota raiz, sufixos opcionais e nota de baixo opcional
-    private val REGEX_ACORDE_TOKEN = Regex("^[A-G][#b]?(?:maj|min|dim|aug|sus2|sus4|sus|add9|m|7|4|6|9|11|13|5\\+|7\\+)?(?:\\([#b]?\\d+\\))?(?:/[A-G][#b]?)?$", RegexOption.IGNORE_CASE)
+    private val REGEX_ACORDE_TOKEN = Regex("^[A-G][#b]?(?:maj|min|dim|aug|sus2|sus4|sus|add9|m)?\\d*(?:\\+[57])?(?:\\([#b]?\\d+\\))?(?:/[A-G][#b]?)?$", RegexOption.IGNORE_CASE)
 
     // Regex para capturar notas isoladas dentro de um acorde (ex: "F#m7/A#" -> Grupo 1: F#, Grupo 2: m7, Grupo 3: /A#)
     private val REGEX_PARSER_ACORDE = Regex("^([A-G][#b]?)(.*?)(?:/([A-G][#b]?))?$", RegexOption.IGNORE_CASE)
@@ -62,43 +62,93 @@ object TranspositorUtil {
     }
 
     /**
-     * Transpõe uma linha de cifra mantendo os alinhamentos e espaços em branco.
+     * Verifica se a linha é uma linha autêntica de cifras (e não uma frase de letra em português).
+     */
+    fun ehLinhaDeCifra(linha: String): Boolean {
+        val limpa = linha.trim()
+        if (limpa.isEmpty()) return false
+
+        // Se for cabeçalho de seção ex: [Intro], [Refrão], Verso 1: não é linha de cifra pura
+        if ((limpa.startsWith("[") && limpa.endsWith("]")) ||
+            limpa.startsWith("Intro", ignoreCase = true) ||
+            limpa.startsWith("Refrão", ignoreCase = true) ||
+            limpa.startsWith("Verso", ignoreCase = true) ||
+            limpa.startsWith("Ponte", ignoreCase = true) ||
+            limpa.startsWith("Solo", ignoreCase = true) ||
+            limpa.startsWith("Final", ignoreCase = true)) {
+            return false
+        }
+
+        val tokens = limpa.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return false
+
+        // Contar quantas palavras/tokens casam com o padrão de acordes
+        val countAcordes = tokens.count { token ->
+            val tSemPont = token.replace(Regex("[()\\[\\].,;:!?|]"), "")
+            ehAcorde(tSemPont)
+        }
+
+        // Se houver palavras longas (> 3 letras sem ser sustenido/bemol/números/barra), é indício de texto de letra (ex: "presença", "Senhor", "glória")
+        val temPalavrasLongasDeLetra = tokens.any { token ->
+            val limpo = token.replace(Regex("[()\\[\\].,;:!?|]"), "")
+            limpo.length >= 4 && !limpo.contains('/') && !limpo.contains('#') && !limpo.contains("maj", ignoreCase = true) && !limpo.contains("sus", ignoreCase = true) && !limpo.contains("add", ignoreCase = true) && !limpo.contains("dim", ignoreCase = true) && !limpo.contains("aug", ignoreCase = true)
+        }
+
+        if (temPalavrasLongasDeLetra) {
+            return false
+        }
+
+        // Se a proporção de acordes na linha for alta (>= 50%), é uma linha de cifras!
+        val proporcaoAcordes = countAcordes.toFloat() / tokens.size
+        return proporcaoAcordes >= 0.5f
+    }
+
+    /**
+     * Transpõe uma linha de cifra mantendo os alinhamentos de colunas e espaços em branco.
      */
     fun transporLinha(linha: String, semitons: Int): String {
         if (semitons == 0 || linha.isBlank()) return linha
 
-        // Se for cabeçalho de seção ex: [Intro], [Refrão], retorna sem alterações
-        val limpa = linha.trim()
-        if ((limpa.startsWith("[") && limpa.endsWith("]")) || limpa.endsWith(":")) {
+        // Se for linha de letra em português, retorna o texto intacto sem alterar palavras como "Em", "A", "E"
+        if (!ehLinhaDeCifra(linha)) {
             return linha
         }
 
         val sb = StringBuilder()
         var i = 0
         val n = linha.length
+        var deltaEspacosPendentes = 0
 
         while (i < n) {
             if (linha[i].isWhitespace()) {
-                sb.append(linha[i])
-                i++
+                val startSpace = i
+                while (i < n && linha[i].isWhitespace()) {
+                    i++
+                }
+                val originalSpaceCount = i - startSpace
+                val novoSpaceCount = (originalSpaceCount - deltaEspacosPendentes).coerceAtLeast(1)
+                deltaEspacosPendentes = 0
+                for (s in 0 until novoSpaceCount) {
+                    sb.append(' ')
+                }
             } else {
-                // Encontrar a palavra/token
-                val start = i
+                val startToken = i
                 while (i < n && !linha[i].isWhitespace()) {
                     i++
                 }
-                val token = linha.substring(start, i)
+                val token = linha.substring(startToken, i)
                 val tokenSemPontuacao = token.replace(Regex("[()\\[\\].,;:!?|]"), "")
 
                 if (ehAcorde(tokenSemPontuacao)) {
-                    // Preservar pontuações em volta do acorde se houver (ex: "(Am7)")
                     val prefixo = token.takeWhile { !it.isLetter() }
                     val sufixo = token.takeLastWhile { !it.isLetter() && !it.isDigit() && it != '#' && it != 'b' && it != 'B' && it != '/' }
                     val corpoAcorde = token.substring(prefixo.length, token.length - sufixo.length)
 
                     if (corpoAcorde.isNotBlank() && ehAcorde(corpoAcorde)) {
                         val acordeTransposto = transporAcordeToken(corpoAcorde, semitons)
-                        sb.append(prefixo).append(acordeTransposto).append(sufixo)
+                        val tokenTransposto = "$prefixo$acordeTransposto$sufixo"
+                        sb.append(tokenTransposto)
+                        deltaEspacosPendentes += (tokenTransposto.length - token.length)
                     } else {
                         sb.append(token)
                     }

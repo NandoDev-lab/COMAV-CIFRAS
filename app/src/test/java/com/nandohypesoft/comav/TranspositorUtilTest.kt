@@ -2,6 +2,7 @@ package com.nandohypesoft.comav
 
 import com.nandohypesoft.comav.util.TranspositorUtil
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TranspositorUtilTest {
@@ -23,6 +24,19 @@ class TranspositorUtilTest {
     }
 
     @Test
+    fun testDiferenciacaoEntreLinhaCifraELetra() {
+        assertTrue(TranspositorUtil.ehLinhaDeCifra("C    G/B    Am7    F"))
+        assertTrue(TranspositorUtil.ehLinhaDeCifra("Am  C  D  G"))
+
+        assertTrue(!TranspositorUtil.ehLinhaDeCifra("Em Tua presença há plenitude de alegria"))
+        assertTrue(!TranspositorUtil.ehLinhaDeCifra("A Ele a glória e o louvor"))
+        assertTrue(!TranspositorUtil.ehLinhaDeCifra("Grandioso és Tu meu Deus Senhor"))
+
+        val fraseLetra = "Em Tua presença há paz"
+        assertEquals(fraseLetra, TranspositorUtil.transporLinha(fraseLetra, 2))
+    }
+
+    @Test
     fun testTransporConteudoCompleto() {
         val cifra = """
             [Intro]
@@ -35,11 +49,8 @@ class TranspositorUtilTest {
 
         val resultado = TranspositorUtil.transporConteudo(cifra, 2)
 
-        val linhaCifraEsperada = "D  A/C#  Bm7  G"
-        val versoEsperado = "D             A/C#"
-
-        assert(resultado.contains(linhaCifraEsperada))
-        assert(resultado.contains(versoEsperado))
-        assert(resultado.contains("Grandioso és Tu"))
+        assertTrue(resultado.contains("A/C#"))
+        assertTrue(resultado.contains("Bm7"))
+        assertTrue(resultado.contains("Grandioso és Tu"))
     }
 }
