@@ -1181,7 +1181,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
                     val blocos = remember(conteudoProcessado, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
                         if (ativarQuebraAutomatica) {
-                            val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, 45)
+                            val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, if (screenWidthDp > 600) 80 else 45)
                             QuebraAutomatica.quebraInteligente(conteudoProcessado, maxChars = maxC)
                         } else {
                             emptyList()
