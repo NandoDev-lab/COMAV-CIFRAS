@@ -475,7 +475,7 @@ fun MainScreen(viewModel: MainViewModel) {
         var autoScrollAtivo by remember { mutableStateOf(false) }
         var autoScrollVelocidade by remember { mutableFloatStateOf(30f) }
         var modoPalcoAtivo by remember { mutableStateOf(false) }
-        var usoDuplaColunaTablet by remember { mutableStateOf(true) }
+        var usoDuplaColunaTablet by remember { mutableStateOf(false) }
 
         val currentContext = LocalContext.current
         DisposableEffect(modoPalcoAtivo) {

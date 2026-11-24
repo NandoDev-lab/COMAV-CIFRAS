@@ -72,6 +72,18 @@ object SessaoManager {
             // Registrar a sessão em tempo real
             firestore.collection("sessoes_ativas").document(androidId).set(dadosSessao)
 
+            // Deletar sessões anteriores de outros dispositivos/IDs com o mesmo nome para garantir apenas 1 sessão ativa globalmente (último login válido)
+            firestore.collection("sessoes_ativas")
+                .whereEqualTo("nomeUsuario", nomeFinal)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    for (doc in snapshot.documents) {
+                        if (doc.id != androidId) {
+                            firestore.collection("sessoes_ativas").document(doc.id).delete()
+                        }
+                    }
+                }
+
             // Se for fora do horário comercial, registrar no histórico
             if (!ehHorarioComercial() && nomeFinal.isNotBlank()) {
                 val idHistorico = "${androidId}_${System.currentTimeMillis()}"
@@ -125,7 +137,25 @@ object SessaoManager {
 
                     val nomeAdminUpper = if (nomeUsuario.isBlank()) "FERNANDO" else nomeUsuario.trim().uppercase()
 
+                    // Filtrar e manter apenas a sessão mais recente (último login válido) para cada nome de usuário globalmente
+                    val documentosUnicos = mutableMapOf<String, com.google.firebase.firestore.DocumentSnapshot>()
                     for (doc in snapshot.documents) {
+                        val nome = doc.getString("nomeUsuario") ?: "Membro"
+                        val nomeKey = nome.replace(" (Você)", "").trim().uppercase()
+                        val inicioEm = doc.getLong("inicioEm") ?: 0L
+
+                        val existente = documentosUnicos[nomeKey]
+                        if (existente == null) {
+                            documentosUnicos[nomeKey] = doc
+                        } else {
+                            val inicioExistente = existente.getLong("inicioEm") ?: 0L
+                            if (inicioEm > inicioExistente) {
+                                documentosUnicos[nomeKey] = doc
+                            }
+                        }
+                    }
+
+                    for (doc in documentosUnicos.values) {
                         val dispositivoId = doc.getString("dispositivoId") ?: ""
                         val nome = doc.getString("nomeUsuario") ?: "Membro"
                         val funcao = doc.getString("funcao") ?: "Membro"
@@ -177,8 +207,6 @@ object SessaoManager {
 
                     // Processar notificações em tempo real
                     for (change in snapshot.documentChanges) {
-                        if (change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) continue
-
                         val doc = change.document
                         val dispositivoId = doc.getString("dispositivoId") ?: ""
                         if (dispositivoId == myAndroidId) continue
@@ -194,7 +222,7 @@ object SessaoManager {
                         val status = doc.getString("status") ?: ""
                         val horInicio = doc.getString("horarioInicio") ?: ""
 
-                        if (status == "ONLINE") {
+                        if (status == "ONLINE" || change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
                             val horaFormatada = if (inicioEm > 0) sdfHora.format(Date(inicioEm)) else horInicio
                             NotificacaoManager.dispararNotificacaoLocal(
                                 context = context,
@@ -202,7 +230,7 @@ object SessaoManager {
                                 mensagem = "$funcao $nome abriu o app às $horaFormatada",
                                 notificationId = (dispositivoId.hashCode() and 0x7FFFFFFF)
                             )
-                        } else if (status == "OFFLINE") {
+                        } else if (status == "OFFLINE" || change.type == com.google.firebase.firestore.DocumentChange.Type.REMOVED) {
                             val horaFimFormatada = if (fimEm > 0) sdfHora.format(Date(fimEm)) else sdfHora.format(Date())
                             NotificacaoManager.dispararNotificacaoLocal(
                                 context = context,
