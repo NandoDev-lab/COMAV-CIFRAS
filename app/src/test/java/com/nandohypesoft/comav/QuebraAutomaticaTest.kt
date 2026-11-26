@@ -19,4 +19,15 @@ class QuebraAutomaticaTest {
         assertEquals(true, indices.contains(3))
         assertEquals(true, indices.contains(5))
     }
+
+    @Test
+    fun testarQuebraInteligenteEstruturada() {
+        val linhas = com.nandohypesoft.comav.ui.CifraParser.parseCifra("G          D          Em\nO mundo é um oceano minha carne é um furacão")
+        val resultado = QuebraAutomatica.quebraInteligenteEstruturada(linhas, maxChars = 20)
+
+        assert(resultado.size > 1)
+        val primeiroChunk = resultado[0]
+        assertEquals(true, primeiroChunk.letra.isNotBlank())
+        assert(primeiroChunk.acordes.isNotEmpty())
+    }
 }

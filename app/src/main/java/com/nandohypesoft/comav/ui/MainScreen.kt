@@ -1179,15 +1179,18 @@ fun MainScreen(viewModel: MainViewModel) {
                     val configuration = LocalConfiguration.current
                     val screenWidthDp = configuration.screenWidthDp
 
-                    val blocos = remember(conteudoProcessado, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
+                    val linhasEstruturadas = remember(conteudoProcessado) {
+                        CifraParser.parseCifra(conteudoProcessado)
+                    }
+
+                    val blocosEstruturados = remember(linhasEstruturadas, ativarQuebraAutomatica, escalaFonte, screenWidthDp) {
                         if (ativarQuebraAutomatica) {
                             val maxC = (screenWidthDp / (11 * escalaFonte)).toInt().coerceIn(18, 45)
-                            QuebraAutomatica.quebraInteligente(conteudoProcessado, maxChars = maxC)
+                            QuebraAutomatica.quebraInteligenteEstruturada(linhasEstruturadas, maxChars = maxC)
                         } else {
                             emptyList()
                         }
                     }
-                    val linhasNormais = remember(conteudoProcessado) { conteudoProcessado.split("\n") }
                     val secoes = remember(conteudoProcessado) { detectarSecoesCifra(conteudoProcessado) }
                     val listState = rememberLazyListState()
                     val coroutineScope = rememberCoroutineScope()
@@ -1296,16 +1299,16 @@ fun MainScreen(viewModel: MainViewModel) {
                             modifier = Modifier.fillMaxSize()
                         ) {
                             if (ativarQuebraAutomatica) {
-                                items(blocos) { bloco ->
+                                items(blocosEstruturados) { bloco ->
                                     if (bloco.isHeader) {
                                         Text(
-                                            text = bloco.cifra,
+                                            text = bloco.letra,
                                             fontSize = (20 * escalaFonte).sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.padding(vertical = 6.dp)
                                         )
-                                    } else if (bloco.cifra.isBlank() && bloco.letra.isBlank()) {
+                                    } else if (bloco.letra.isBlank() && bloco.acordes.isEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                     } else {
                                         Surface(
@@ -1321,9 +1324,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                                     .padding(8.dp),
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                if (bloco.cifra.isNotBlank()) {
+                                                if (bloco.acordes.isNotEmpty()) {
                                                     LinhaCifraInteractive(
-                                                        linha = bloco.cifra,
+                                                        linha = reconstruirLinhaAcordes(bloco),
                                                         fontSizeSp = 18 * escalaFonte,
                                                         isBold = true,
                                                         modoPalco = modoPalcoAtivo,
@@ -1347,11 +1350,10 @@ fun MainScreen(viewModel: MainViewModel) {
                                     }
                                 }
                             } else {
-                                itemsIndexed(linhasNormais) { index, linha ->
-                                    val isHeader = secoes.any { it.indiceLinha == index }
-                                    if (isHeader) {
+                                itemsIndexed(linhasEstruturadas) { index, linha ->
+                                    if (linha.isHeader) {
                                         Text(
-                                            text = if (linha.isEmpty()) " " else linha,
+                                            text = if (linha.letra.isEmpty()) " " else linha.letra,
                                             fontSize = (18 * escalaFonte).sp,
                                             lineHeight = (28 * escalaFonte).sp,
                                             fontWeight = FontWeight.Bold,
@@ -1359,21 +1361,43 @@ fun MainScreen(viewModel: MainViewModel) {
                                             color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFD54F) else MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.padding(vertical = 4.dp)
                                         )
-                                    } else if (ehCifra) {
+                                    } else if (linha.letra.isBlank() && linha.acordes.isNotEmpty()) {
                                         LinhaCifraInteractive(
-                                            linha = linha,
+                                            linha = reconstruirLinhaAcordes(linha),
                                             fontSizeSp = 18 * escalaFonte,
                                             isBold = false,
                                             modoPalco = modoPalcoAtivo,
                                             onAcordeClick = { acordeParaDiagrama = it }
                                         )
+                                    } else if (ehCifra && linha.acordes.isNotEmpty()) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            LinhaCifraInteractive(
+                                                linha = reconstruirLinhaAcordes(linha),
+                                                fontSizeSp = 18 * escalaFonte,
+                                                isBold = false,
+                                                modoPalco = modoPalcoAtivo,
+                                                onAcordeClick = { acordeParaDiagrama = it }
+                                            )
+                                            SelectionContainer {
+                                                Text(
+                                                    text = if (linha.letra.isEmpty()) " " else linha.letra,
+                                                    fontSize = (18 * escalaFonte).sp,
+                                                    lineHeight = (26 * escalaFonte).sp,
+                                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                    color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+                                                )
+                                            }
+                                        }
                                     } else {
                                         SelectionContainer {
                                             Text(
-                                                text = if (linha.isEmpty()) " " else linha,
+                                                text = if (linha.letra.isEmpty()) " " else linha.letra,
                                                 fontSize = (18 * escalaFonte).sp,
                                                 lineHeight = (28 * escalaFonte).sp,
-                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+                                                fontFamily = if (ehCifra) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
                                                 color = if (modoPalcoAtivo) androidx.compose.ui.graphics.Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground,
                                                 modifier = Modifier.padding(vertical = 1.dp)
                                             )

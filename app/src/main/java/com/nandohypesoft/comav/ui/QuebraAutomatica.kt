@@ -138,4 +138,75 @@ object QuebraAutomatica {
 
         return blocos
     }
+
+    /**
+     * Nova função de quebra inteligente operando sobre LinhaEstruturada com offsets de acordes.
+     */
+    fun quebraInteligenteEstruturada(
+        linhas: List<LinhaEstruturada>,
+        maxChars: Int = 35
+    ): List<LinhaEstruturada> {
+        val resultado = mutableListOf<LinhaEstruturada>()
+        var currentId = 1
+
+        for (linha in linhas) {
+            if (linha.isHeader || (linha.letra.isBlank() && linha.acordes.isEmpty())) {
+                resultado.add(linha.copy(id = currentId++))
+                continue
+            }
+
+            val maxLen = maxOf(
+                linha.letra.length,
+                linha.acordes.maxOfOrNull { it.charIndex + it.nome.length } ?: 0
+            )
+
+            if (maxLen > maxChars && maxChars > 0) {
+                var currentIndex = 0
+                val baseText = linha.letra
+
+                while (currentIndex < maxLen) {
+                    val endIdx = minOf(currentIndex + maxChars, maxLen)
+                    var breakIdx = endIdx
+
+                    if (endIdx < maxLen && baseText.isNotEmpty() && endIdx <= baseText.length) {
+                        val lastSpace = baseText.lastIndexOf(' ', endIdx)
+                        if (lastSpace > currentIndex) {
+                            breakIdx = lastSpace + 1
+                        }
+                    } else if (endIdx > maxLen) {
+                        breakIdx = maxLen
+                    }
+
+                    val chunkLetra = if (currentIndex < baseText.length && breakIdx <= baseText.length) {
+                        baseText.substring(currentIndex, breakIdx)
+                    } else if (currentIndex < baseText.length) {
+                        baseText.substring(currentIndex)
+                    } else {
+                        ""
+                    }
+
+                    // Acordes que caem neste intervalo [currentIndex, breakIdx)
+                    val chunkAcordes = linha.acordes
+                        .filter { it.charIndex in currentIndex until (if (chunkLetra.isNotEmpty()) currentIndex + chunkLetra.length else breakIdx) }
+                        .map { it.copy(charIndex = it.charIndex - currentIndex) }
+
+                    resultado.add(
+                        LinhaEstruturada(
+                            id = currentId++,
+                            letra = chunkLetra,
+                            acordes = chunkAcordes,
+                            isHeader = false
+                        )
+                    )
+
+                    currentIndex = breakIdx
+                    if (currentIndex <= 0 || currentIndex >= maxLen) break
+                }
+            } else {
+                resultado.add(linha.copy(id = currentId++))
+            }
+        }
+
+        return resultado
+    }
 }
